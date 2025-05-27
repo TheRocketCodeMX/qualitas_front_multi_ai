@@ -29,11 +29,9 @@ export default function ResultadosPage() {
   })
 
   const [editableUserData, setEditableUserData] = useState({
-    nombre: "María Hernández",
     genero: "Femenino",
-    fechaNacimiento: "01/02/2001",
+    fechaNacimiento: "2001-02-01",
     telefono: "5512345678",
-    email: "maria@mail.com",
     codigoPostal: "07310",
   })
 
@@ -397,40 +395,43 @@ export default function ResultadosPage() {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="edit-marca" className="text-sm font-medium text-gray-700">
-                        Marca
+                        Marca <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="edit-marca"
                         value={editableVehicleData.marca}
                         onChange={(e) => setEditableVehicleData({ ...editableVehicleData, marca: e.target.value })}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                        required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-año" className="text-sm font-medium text-gray-700">
-                        Año
+                        Año <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="edit-año"
                         value={editableVehicleData.año}
                         onChange={(e) => setEditableVehicleData({ ...editableVehicleData, año: e.target.value })}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                        required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-modelo" className="text-sm font-medium text-gray-700">
-                        Modelo
+                        Modelo <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="edit-modelo"
                         value={editableVehicleData.modelo}
                         onChange={(e) => setEditableVehicleData({ ...editableVehicleData, modelo: e.target.value })}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                        required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-descripcion" className="text-sm font-medium text-gray-700">
-                        Descripción
+                        Descripción <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="edit-descripcion"
@@ -439,6 +440,7 @@ export default function ResultadosPage() {
                           setEditableVehicleData({ ...editableVehicleData, descripcion: e.target.value })
                         }
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                        required
                       />
                     </div>
                   </div>
@@ -449,23 +451,13 @@ export default function ResultadosPage() {
                   <h4 className="font-medium text-gray-700">Datos del usuario</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="edit-nombre" className="text-sm font-medium text-gray-700">
-                        Nombre
-                      </Label>
-                      <Input
-                        id="edit-nombre"
-                        value={editableUserData.nombre}
-                        onChange={(e) => setEditableUserData({ ...editableUserData, nombre: e.target.value })}
-                        className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                      />
-                    </div>
-                    <div className="space-y-2">
                       <Label htmlFor="edit-genero" className="text-sm font-medium text-gray-700">
-                        Género
+                        Género <span className="text-red-500">*</span>
                       </Label>
                       <Select
                         value={editableUserData.genero}
                         onValueChange={(value) => setEditableUserData({ ...editableUserData, genero: value })}
+                        required
                       >
                         <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
                           <SelectValue />
@@ -478,47 +470,47 @@ export default function ResultadosPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-fecha" className="text-sm font-medium text-gray-700">
-                        Fecha de nacimiento
+                        Fecha de nacimiento <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="edit-fecha"
+                        type="date"
                         value={editableUserData.fechaNacimiento}
                         onChange={(e) => setEditableUserData({ ...editableUserData, fechaNacimiento: e.target.value })}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                        max={new Date().toISOString().split("T")[0]}
+                        required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-telefono" className="text-sm font-medium text-gray-700">
-                        Teléfono
+                        Teléfono <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="edit-telefono"
                         value={editableUserData.telefono}
                         onChange={(e) => setEditableUserData({ ...editableUserData, telefono: e.target.value })}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-email" className="text-sm font-medium text-gray-700">
-                        Email
-                      </Label>
-                      <Input
-                        id="edit-email"
-                        type="email"
-                        value={editableUserData.email}
-                        onChange={(e) => setEditableUserData({ ...editableUserData, email: e.target.value })}
-                        className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                        required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-cp" className="text-sm font-medium text-gray-700">
-                        Código postal
+                        Código postal <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="edit-cp"
                         value={editableUserData.codigoPostal}
-                        onChange={(e) => setEditableUserData({ ...editableUserData, codigoPostal: e.target.value })}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          if (/^\d*$/.test(value) && value.length <= 5) {
+                            setEditableUserData({ ...editableUserData, codigoPostal: value })
+                          }
+                        }}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                        maxLength={5}
+                        pattern="[0-9]{5}"
+                        required
                       />
                     </div>
                   </div>
@@ -535,9 +527,27 @@ export default function ResultadosPage() {
                   </Button>
                   <Button
                     onClick={() => {
-                      // Here you would typically save the data
+                      // Validate required fields
+                      if (
+                        !editableVehicleData.marca ||
+                        !editableVehicleData.año ||
+                        !editableVehicleData.modelo ||
+                        !editableVehicleData.descripcion ||
+                        !editableUserData.genero ||
+                        !editableUserData.fechaNacimiento ||
+                        !editableUserData.telefono ||
+                        !editableUserData.codigoPostal
+                      ) {
+                        alert("Por favor, completa todos los campos obligatorios.")
+                        return
+                      }
+
+                      if (editableUserData.codigoPostal.length !== 5) {
+                        alert("El código postal debe tener exactamente 5 dígitos.")
+                        return
+                      }
+
                       setIsEditMode(false)
-                      // Show success message or update the display
                     }}
                     className="bg-[#8BC34A] hover:bg-[#7CB342] text-white"
                   >
@@ -558,8 +568,8 @@ export default function ResultadosPage() {
                   </span>
                   <span className="text-gray-600">•</span>
                   <span className="text-gray-600">
-                    {editableUserData.nombre} - {editableUserData.genero} - {editableUserData.fechaNacimiento} -{" "}
-                    {editableUserData.telefono} - {editableUserData.email} - {editableUserData.codigoPostal}
+                    {editableUserData.genero} - {editableUserData.fechaNacimiento} - {editableUserData.telefono} -{" "}
+                    {editableUserData.codigoPostal}
                   </span>
                 </div>
                 <Button
