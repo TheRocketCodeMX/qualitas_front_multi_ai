@@ -31,7 +31,6 @@ export default function ResultadosPage() {
   const [editableUserData, setEditableUserData] = useState({
     genero: "Femenino",
     fechaNacimiento: "2001-02-01",
-    telefono: "5512345678",
     codigoPostal: "07310",
   })
 
@@ -456,7 +455,7 @@ export default function ResultadosPage() {
                 {/* User Data */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-gray-700">Datos del usuario</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="edit-genero" className="text-sm font-medium text-gray-700">
                         Género <span className="text-red-500">*</span>
@@ -486,25 +485,6 @@ export default function ResultadosPage() {
                         onChange={(e) => setEditableUserData({ ...editableUserData, fechaNacimiento: e.target.value })}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
                         max={new Date().toISOString().split("T")[0]}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-telefono" className="text-sm font-medium text-gray-700">
-                        Teléfono <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="edit-telefono"
-                        value={editableUserData.telefono}
-                        onChange={(e) => {
-                          const value = e.target.value
-                          if (/^\d*$/.test(value) && value.length <= 10) {
-                            setEditableUserData({ ...editableUserData, telefono: value })
-                          }
-                        }}
-                        className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                        maxLength={10}
-                        pattern="[0-9]{10}"
                         required
                       />
                     </div>
@@ -549,7 +529,6 @@ export default function ResultadosPage() {
                         !editableVehicleData.descripcion ||
                         !editableUserData.genero ||
                         !editableUserData.fechaNacimiento ||
-                        !editableUserData.telefono ||
                         !editableUserData.codigoPostal
                       ) {
                         alert("Por favor, completa todos los campos obligatorios.")
@@ -558,11 +537,6 @@ export default function ResultadosPage() {
 
                       if (editableUserData.codigoPostal.length !== 5) {
                         alert("El código postal debe tener exactamente 5 dígitos.")
-                        return
-                      }
-
-                      if (editableUserData.telefono.length !== 10) {
-                        alert("El teléfono debe tener exactamente 10 dígitos.")
                         return
                       }
 
@@ -587,8 +561,7 @@ export default function ResultadosPage() {
                   </span>
                   <span className="text-gray-600">•</span>
                   <span className="text-gray-600">
-                    {editableUserData.genero} - {editableUserData.fechaNacimiento} - {editableUserData.telefono} -{" "}
-                    {editableUserData.codigoPostal}
+                    {editableUserData.genero} - {editableUserData.fechaNacimiento} - {editableUserData.codigoPostal}
                   </span>
                 </div>
                 <Button
