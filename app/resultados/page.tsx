@@ -412,8 +412,15 @@ export default function ResultadosPage() {
                       <Input
                         id="edit-año"
                         value={editableVehicleData.año}
-                        onChange={(e) => setEditableVehicleData({ ...editableVehicleData, año: e.target.value })}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          if (/^\d*$/.test(value) && value.length <= 4) {
+                            setEditableVehicleData({ ...editableVehicleData, año: value })
+                          }
+                        }}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                        maxLength={4}
+                        pattern="[0-9]{4}"
                         required
                       />
                     </div>
@@ -489,8 +496,15 @@ export default function ResultadosPage() {
                       <Input
                         id="edit-telefono"
                         value={editableUserData.telefono}
-                        onChange={(e) => setEditableUserData({ ...editableUserData, telefono: e.target.value })}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          if (/^\d*$/.test(value) && value.length <= 10) {
+                            setEditableUserData({ ...editableUserData, telefono: value })
+                          }
+                        }}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                        maxLength={10}
+                        pattern="[0-9]{10}"
                         required
                       />
                     </div>
@@ -544,6 +558,11 @@ export default function ResultadosPage() {
 
                       if (editableUserData.codigoPostal.length !== 5) {
                         alert("El código postal debe tener exactamente 5 dígitos.")
+                        return
+                      }
+
+                      if (editableUserData.telefono.length !== 10) {
+                        alert("El teléfono debe tener exactamente 10 dígitos.")
                         return
                       }
 
