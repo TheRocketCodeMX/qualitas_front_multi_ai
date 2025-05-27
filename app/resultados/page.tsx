@@ -334,6 +334,19 @@ export default function ResultadosPage() {
     </div>
   )
 
+  const isFormValid = () => {
+    return (
+      editableVehicleData.marca.trim() !== "" &&
+      editableVehicleData.año.trim() !== "" &&
+      editableVehicleData.modelo.trim() !== "" &&
+      editableVehicleData.descripcion.trim() !== "" &&
+      editableUserData.genero.trim() !== "" &&
+      editableUserData.fechaNacimiento.trim() !== "" &&
+      editableUserData.codigoPostal.trim() !== "" &&
+      editableUserData.codigoPostal.length === 5
+    )
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -542,7 +555,8 @@ export default function ResultadosPage() {
 
                       setIsEditMode(false)
                     }}
-                    className="bg-[#8BC34A] hover:bg-[#7CB342] text-white"
+                    className="bg-[#8BC34A] hover:bg-[#7CB342] text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    disabled={!isFormValid()}
                   >
                     Guardar cambios
                   </Button>
