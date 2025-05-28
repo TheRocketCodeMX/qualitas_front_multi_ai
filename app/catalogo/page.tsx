@@ -13,6 +13,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import * as XLSX from "xlsx"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface Solicitud {
   id: string
@@ -32,6 +40,10 @@ export default function CatalogoPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [validatedData, setValidatedData] = useState<any[]>([])
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
 
   const itemsPerPage = 5
   const totalPages = Math.ceil(solicitudes.length / itemsPerPage)
@@ -345,10 +357,107 @@ export default function CatalogoPage() {
     }
   }
 
+  // Función para validar el formato del layout
+  const validateLayoutFormat = (data: any[]): { isValid: boolean; errors: string[]; validData: any[] } => {
+    const errors: string[] = []
+    const expectedColumns = ["Número", "Año", "Marca", "Modelo", "Descripción", "CP", "Género", "Fecha nacimiento"]
+
+    if (data.length < 2) {
+      errors.push("El archivo debe contener al menos una fila de encabezados y una fila de datos")
+      return { isValid: false, errors, validData: [] }
+    }
+
+    const headers = data[0]
+
+    // Validar que tenga exactamente las columnas esperadas
+    if (headers.length !== expectedColumns.length) {
+      errors.push(`El archivo debe tener exactamente ${expectedColumns.length} columnas`)
+    }
+
+    // Validar que las columnas coincidan exactamente
+    expectedColumns.forEach((expectedCol, index) => {
+      if (headers[index] !== expectedCol) {
+        errors.push(
+          `La columna ${index + 1} debe ser "${expectedCol}", pero se encontró "${headers[index] || "vacía"}"`,
+        )
+      }
+    })
+
+    if (errors.length > 0) {
+      return { isValid: false, errors, validData: [] }
+    }
+
+    // Validar datos de cada fila
+    const validData: any[] = []
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i]
+      const rowErrors: string[] = []
+
+      // Validar que la fila tenga el número correcto de columnas
+      if (row.length !== expectedColumns.length) {
+        errors.push(`La fila ${i + 1} debe tener ${expectedColumns.length} columnas`)
+        continue
+      }
+
+      // Validar cada campo obligatorio
+      expectedColumns.forEach((colName, colIndex) => {
+        const cellValue = row[colIndex]
+
+        if (cellValue === undefined || cellValue === null || String(cellValue).trim() === "") {
+          rowErrors.push(`${colName} es obligatorio`)
+        } else {
+          // Validaciones específicas por tipo de campo
+          switch (colName) {
+            case "Número":
+              if (isNaN(Number(cellValue)) || Number(cellValue) <= 0) {
+                rowErrors.push("Número debe ser un valor numérico positivo")
+              }
+              break
+            case "Año":
+              const year = Number(cellValue)
+              if (isNaN(year) || year < 1990 || year > new Date().getFullYear() + 1) {
+                rowErrors.push(`Año debe estar entre 1990 y ${new Date().getFullYear() + 1}`)
+              }
+              break
+            case "CP":
+              const cp = String(cellValue).trim()
+              if (!/^\d{5}$/.test(cp)) {
+                rowErrors.push("CP debe ser un código postal de 5 dígitos")
+              }
+              break
+            case "Género":
+              const gender = String(cellValue).trim().toLowerCase()
+              if (!["masculino", "femenino", "hombre", "mujer", "m", "f"].includes(gender)) {
+                rowErrors.push("Género debe ser Masculino, Femenino, Hombre, Mujer, M o F")
+              }
+              break
+            case "Fecha nacimiento":
+              const dateStr = String(cellValue).trim()
+              // Validar formato de fecha (puede ser YYYY-MM-DD, DD/MM/YYYY, etc.)
+              const date = new Date(dateStr)
+              if (isNaN(date.getTime()) || date > new Date() || date.getFullYear() < 1900) {
+                rowErrors.push("Fecha nacimiento debe ser una fecha válida")
+              }
+              break
+          }
+        }
+      })
+
+      if (rowErrors.length > 0) {
+        errors.push(`Fila ${i + 1}: ${rowErrors.join(", ")}`)
+      } else {
+        validData.push(row)
+      }
+    }
+
+    return { isValid: errors.length === 0, errors, validData }
+  }
+
   // Función para manejar la carga de archivos
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setUploadError(null)
     setUploadSuccess(null)
+    setValidationErrors([])
 
     const file = event.target.files?.[0]
     if (!file) return
@@ -390,40 +499,24 @@ export default function CatalogoPage() {
           return
         }
 
-        const recordCount = jsonData.length - 1
+        // Validar formato y datos
+        const validation = validateLayoutFormat(jsonData)
 
-        // Crear nuevas solicitudes basadas en los registros cargados
-        const nuevasSolicitudes: Solicitud[] = []
-        const registrosPorSolicitud = 10 // Dividir en grupos de 10 registros
-
-        for (let i = 0; i < recordCount; i += registrosPorSolicitud) {
-          const registrosEnGrupo = Math.min(registrosPorSolicitud, recordCount - i)
-          const nuevaSolicitud: Solicitud = {
-            id: `SOL-${Date.now()}-${Math.floor(i / registrosPorSolicitud + 1)}`,
-            fechaCarga: new Date().toLocaleString("es-ES"),
-            numeroRegistros: registrosEnGrupo,
-            estatus: "En proceso",
-          }
-          nuevasSolicitudes.push(nuevaSolicitud)
+        if (!validation.isValid) {
+          setValidationErrors(validation.errors)
+          setUploadError("El archivo no cumple con el formato requerido. Revisa los errores detallados.")
+          setIsUploading(false)
+          if (fileInputRef.current) fileInputRef.current.value = ""
+          return
         }
 
-        setSolicitudes((prev) => [...prev, ...nuevasSolicitudes])
-        setShowSolicitudes(true)
-        setCurrentPage(1)
-
-        setUploadSuccess(
-          `Archivo cargado correctamente. ${recordCount} registros procesados en ${nuevasSolicitudes.length} solicitudes.`,
-        )
-
-        toast({
-          title: "Archivo cargado",
-          description: `Se han creado ${nuevasSolicitudes.length} solicitudes de procesamiento.`,
-          duration: 3000,
-        })
+        // Si la validación es exitosa, mostrar modal de confirmación
+        setValidatedData(validation.validData)
+        setShowConfirmModal(true)
+        setIsUploading(false)
       } catch (error) {
         console.error("Error al procesar el archivo:", error)
         setUploadError("Error al procesar el archivo. Verifica que sea un Excel válido.")
-      } finally {
         setIsUploading(false)
         if (fileInputRef.current) fileInputRef.current.value = ""
       }
@@ -436,6 +529,46 @@ export default function CatalogoPage() {
     }
 
     reader.readAsArrayBuffer(file)
+  }
+
+  // Función para confirmar y procesar los datos validados
+  const handleConfirmProcessing = () => {
+    const recordCount = validatedData.length
+
+    // Crear nuevas solicitudes basadas en los registros validados
+    const nuevasSolicitudes: Solicitud[] = []
+    const registrosPorSolicitud = 10 // Dividir en grupos de 10 registros
+
+    for (let i = 0; i < recordCount; i += registrosPorSolicitud) {
+      const registrosEnGrupo = Math.min(registrosPorSolicitud, recordCount - i)
+      const nuevaSolicitud: Solicitud = {
+        id: `SOL-${Date.now()}-${Math.floor(i / registrosPorSolicitud + 1)}`,
+        fechaCarga: new Date().toLocaleString("es-ES"),
+        numeroRegistros: registrosEnGrupo,
+        estatus: "En proceso",
+      }
+      nuevasSolicitudes.push(nuevaSolicitud)
+    }
+
+    setSolicitudes((prev) => [...prev, ...nuevasSolicitudes])
+    setShowSolicitudes(true)
+    setCurrentPage(1)
+
+    setUploadSuccess(
+      `Archivo procesado correctamente. ${recordCount} registros válidos procesados en ${nuevasSolicitudes.length} solicitudes.`,
+    )
+
+    toast({
+      title: "Archivo procesado",
+      description: `Se han creado ${nuevasSolicitudes.length} solicitudes de procesamiento.`,
+      duration: 3000,
+    })
+
+    // Limpiar estados
+    setShowConfirmModal(false)
+    setValidatedData([])
+    setValidationErrors([])
+    if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
   const getStatusBadge = (estatus: Solicitud["estatus"]) => {
@@ -468,6 +601,24 @@ export default function CatalogoPage() {
         {uploadSuccess && (
           <Alert className="mb-4 border-[#8BC34A] bg-[#F8FFF8]">
             <AlertDescription className="text-[#8BC34A]">{uploadSuccess}</AlertDescription>
+          </Alert>
+        )}
+
+        {validationErrors.length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              <div className="space-y-2">
+                <p className="font-medium">Errores de validación encontrados:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  {validationErrors.slice(0, 10).map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                  {validationErrors.length > 10 && (
+                    <li className="text-gray-600">... y {validationErrors.length - 10} errores más</li>
+                  )}
+                </ul>
+              </div>
+            </AlertDescription>
           </Alert>
         )}
 
@@ -635,6 +786,44 @@ export default function CatalogoPage() {
             </div>
           </div>
         )}
+
+        {/* Modal de confirmación */}
+        <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirmar procesamiento</DialogTitle>
+              <DialogDescription>
+                Se han validado {validatedData.length} registros correctamente. ¿Deseas proceder con el procesamiento de
+                estos datos?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="text-sm text-gray-600">
+                <p>
+                  <strong>Registros válidos:</strong> {validatedData.length}
+                </p>
+                <p>
+                  <strong>Solicitudes a crear:</strong> {Math.ceil(validatedData.length / 10)}
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowConfirmModal(false)
+                  setValidatedData([])
+                  if (fileInputRef.current) fileInputRef.current.value = ""
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmProcessing} className="bg-[#8BC34A] hover:bg-[#7CB342] text-white">
+                Confirmar procesamiento
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   )
