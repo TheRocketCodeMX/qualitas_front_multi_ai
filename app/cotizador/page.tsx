@@ -22,10 +22,10 @@ export default function CotizadorPage() {
   const [isProcessing, setIsProcessing] = useState(false)
 
   const [vehicleData, setVehicleData] = useState({
-    marca: "Honda",
-    año: "2022",
-    modelo: "CRV",
-    descripcion: "Elegance 2WD",
+    marca: "",
+    año: "",
+    modelo: "",
+    descripcion: "",
   })
 
   const [userData, setUserData] = useState({
@@ -36,6 +36,10 @@ export default function CotizadorPage() {
 
   const [selectedInsurers, setSelectedInsurers] = useState<string[]>(["HDI", "Mapfre", "GNP", "Chubb", "AXA"])
   const [cpError, setCpError] = useState("")
+
+  const [marcas, setMarcas] = useState<string[]>([])
+  const [isLoadingMarcas, setIsLoadingMarcas] = useState(false)
+  const [marcaError, setMarcaError] = useState("")
 
   if (isLoading) {
     return (
@@ -50,8 +54,6 @@ export default function CotizadorPage() {
   }
 
   const vehicleTypes = [{ id: "auto", label: "Auto/SUV", icon: Car, disabled: false }]
-
-  const marcaOptions = ["Opción 1", "Opción 2", "Opción 3", "Opción 4", "Opción 5"]
 
   const availableInsurers = [
     { id: "HDI", name: "HDI", logo: "/images/hdi-logo.png" },
@@ -154,6 +156,53 @@ export default function CotizadorPage() {
     }
   }
 
+  const fetchMarcas = async (año: string) => {
+    if (!/^\d{4}$/.test(año)) {
+      return
+    }
+
+    setIsLoadingMarcas(true)
+    setMarcaError("")
+
+    try {
+      const username = "Proteg@apitherocketcode.com"
+      const password = "Proteg@apitherocketcode.com"
+      const credentials = btoa(`${username}:${password}`)
+
+      const response = await fetch(
+        `https://api.catalogos.therocketcode.com/api/v1/catalogs/qualitas/brands-by-model?model=${año}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            "Content-Type": "application/json",
+          },
+        },
+      )
+
+      if (!response.ok) {
+        throw new Error("Error al obtener las marcas")
+      }
+
+      const marcasData: string[] = await response.json()
+      setMarcas(marcasData)
+
+      // Clear dependent fields when new marcas are loaded
+      setVehicleData((prev) => ({
+        ...prev,
+        marca: "",
+        modelo: "",
+        descripcion: "",
+      }))
+    } catch (error) {
+      console.error("Error fetching marcas:", error)
+      setMarcaError("Error al cargar las marcas. Inténtalo de nuevo.")
+      setMarcas([])
+    } finally {
+      setIsLoadingMarcas(false)
+    }
+  }
+
   const renderStep1 = () => (
     <div className="space-y-6">
       {/* Vehicle Type Tabs */}
@@ -195,6 +244,25 @@ export default function CotizadorPage() {
                     // Solo permitir números y máximo 4 dígitos
                     if (/^\d{0,4}$/.test(value)) {
                       setVehicleData({ ...vehicleData, año: value })
+
+                      // Clear dependent fields and marcas if año is empty
+                      if (!value) {
+                        setMarcas([])
+                        setVehicleData((prev) => ({
+                          ...prev,
+                          año: value,
+                          marca: "",
+                          modelo: "",
+                          descripcion: "",
+                        }))
+                        setMarcaError("")
+                      }
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value
+                    if (value && /^\d{4}$/.test(value)) {
+                      fetchMarcas(value)
                     }
                   }}
                   maxLength={4}
@@ -207,30 +275,38 @@ export default function CotizadorPage() {
                 <Label htmlFor="marca" className="text-sm font-medium text-gray-700">
                   Marca
                 </Label>
-                <div className="relative">
-                  <Input
-                    id="marca"
-                    placeholder="Buscar marca"
-                    value={vehicleData.marca}
-                    onChange={(e) => setVehicleData({ ...vehicleData, marca: e.target.value })}
-                    className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                  />
-                  {vehicleData.marca && (
-                    <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md shadow-lg z-10 mt-1 max-h-40 overflow-y-auto">
-                      {marcaOptions
-                        .filter((marca) => marca.toLowerCase().includes(vehicleData.marca.toLowerCase()))
-                        .map((marca, index) => (
-                          <div
-                            key={index}
-                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                            onClick={() => setVehicleData({ ...vehicleData, marca })}
-                          >
-                            {marca}
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
+                <Select
+                  value={vehicleData.marca}
+                  onValueChange={(value) => {
+                    setVehicleData({
+                      ...vehicleData,
+                      marca: value,
+                      modelo: "", // Clear modelo when marca changes
+                      descripcion: "", // Clear descripcion when marca changes
+                    })
+                  }}
+                  disabled={marcas.length === 0 || isLoadingMarcas}
+                >
+                  <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
+                    <SelectValue
+                      placeholder={
+                        isLoadingMarcas
+                          ? "Cargando marcas..."
+                          : marcas.length === 0
+                            ? "Primero ingresa un año válido"
+                            : "Selecciona una marca"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {marcas.map((marca, index) => (
+                      <SelectItem key={index} value={marca}>
+                        {marca}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {marcaError && <p className="text-xs text-red-500">{marcaError}</p>}
               </div>
 
               {/* Campo Modelo */}
@@ -240,10 +316,17 @@ export default function CotizadorPage() {
                 </Label>
                 <Select
                   value={vehicleData.modelo}
-                  onValueChange={(value) => setVehicleData({ ...vehicleData, modelo: value })}
+                  onValueChange={(value) =>
+                    setVehicleData({
+                      ...vehicleData,
+                      modelo: value,
+                      descripcion: "", // Clear descripcion when modelo changes
+                    })
+                  }
+                  disabled={!vehicleData.marca}
                 >
                   <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
-                    <SelectValue placeholder="Buscar modelo" />
+                    <SelectValue placeholder={!vehicleData.marca ? "Primero selecciona una marca" : "Buscar modelo"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="CRV">Honda CRV</SelectItem>
@@ -261,9 +344,12 @@ export default function CotizadorPage() {
                 <Select
                   value={vehicleData.descripcion}
                   onValueChange={(value) => setVehicleData({ ...vehicleData, descripcion: value })}
+                  disabled={!vehicleData.modelo}
                 >
                   <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
-                    <SelectValue placeholder="Seleccionar descripción" />
+                    <SelectValue
+                      placeholder={!vehicleData.modelo ? "Primero selecciona un modelo" : "Seleccionar descripción"}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Elegance 2WD">Elegance 2WD</SelectItem>
