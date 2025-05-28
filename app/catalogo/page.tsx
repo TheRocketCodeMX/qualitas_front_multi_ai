@@ -112,7 +112,7 @@ export default function CatalogoPage() {
   // Función para descargar el layout de Excel
   const handleDownloadLayout = () => {
     try {
-      const columns = ["Número", "Marca", "Modelo", "Año", "Año nacimiento", "CP", "Género", "Descripción"]
+      const columns = ["Número", "Año", "Marca", "Modelo", "Descripción", "CP", "Género", "Fecha nacimiento"]
 
       const wb = XLSX.utils.book_new()
       const ws = XLSX.utils.aoa_to_sheet([columns])
