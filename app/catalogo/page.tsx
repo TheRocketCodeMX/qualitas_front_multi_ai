@@ -7,7 +7,7 @@ import { useAuthGuard } from "@/hooks/useAuthGuard"
 import DashboardLayout from "@/components/layout/DashboardLayout"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChevronLeft, ChevronRight, Download, Upload, RefreshCw, Eye } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Upload, RefreshCw, Eye } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -112,7 +112,7 @@ export default function CatalogoPage() {
   // Función para descargar el layout de Excel
   const handleDownloadLayout = () => {
     try {
-      const columns = ["Número", "Marca", "Modelo", "Año", "Año nacimiento", "CP", "Género"]
+      const columns = ["Número", "Marca", "Modelo", "Año", "Año nacimiento", "CP", "Género", "Descripción"]
 
       const wb = XLSX.utils.book_new()
       const ws = XLSX.utils.aoa_to_sheet([columns])
@@ -154,7 +154,7 @@ export default function CatalogoPage() {
       // Crear headers para el Excel con estructura detallada
       const headers = [
         "Número",
-        "Marca", 
+        "Marca",
         "Modelo",
         "Año",
         "Año nacimiento",
@@ -166,12 +166,12 @@ export default function CatalogoPage() {
         "CHUBB - Amplia - Gastos Médicos",
         "CHUBB - Amplia - Coberturas",
         "CHUBB - Limitada - Prima Anual",
-        "CHUBB - Limitada - Deducible", 
+        "CHUBB - Limitada - Deducible",
         "CHUBB - Limitada - Gastos Médicos",
         "CHUBB - Limitada - Coberturas",
         "CHUBB - RC - Prima Anual",
         "CHUBB - RC - Deducible",
-        "CHUBB - RC - Gastos Médicos", 
+        "CHUBB - RC - Gastos Médicos",
         "CHUBB - RC - Coberturas",
         // MAPFRE
         "MAPFRE - Amplia - Prima Anual",
@@ -224,17 +224,17 @@ export default function CatalogoPage() {
         "AXA - RC - Prima Anual",
         "AXA - RC - Deducible",
         "AXA - RC - Gastos Médicos",
-        "AXA - RC - Coberturas"
+        "AXA - RC - Coberturas",
       ]
 
       // Generar datos de ejemplo para los resultados procesados
       const resultData = [headers]
-      
+
       const aseguradoras = ["CHUBB", "MAPFRE", "GNP", "HDI", "AXA"]
       const marcas = ["Honda", "Toyota", "Nissan", "Volkswagen", "Chevrolet"]
       const modelos = ["CRV", "Corolla", "Sentra", "Jetta", "Aveo"]
       const coberturas = ["Amplia", "Limitada", "RC"]
-      
+
       for (let i = 1; i <= solicitud.numeroRegistros; i++) {
         const vehicleData = [
           i, // Número
@@ -243,21 +243,21 @@ export default function CatalogoPage() {
           2015 + Math.floor(Math.random() * 9), // Año 2015-2023
           1970 + Math.floor(Math.random() * 35), // Año nacimiento 1970-2004
           String(10000 + Math.floor(Math.random() * 90000)).substring(0, 5), // CP
-          Math.random() > 0.5 ? "Masculino" : "Femenino" // Género
+          Math.random() > 0.5 ? "Masculino" : "Femenino", // Género
         ]
 
         // Generar datos para cada aseguradora y cobertura
         const insuranceData: any[] = []
-        
-        aseguradoras.forEach(aseguradora => {
-          coberturas.forEach(cobertura => {
+
+        aseguradoras.forEach((aseguradora) => {
+          coberturas.forEach((cobertura) => {
             let basePrice = 0
             let deducible = ""
             let gastosMedicos = ""
             let coberturaDesc = ""
 
             // Configurar precios base según cobertura
-            switch(cobertura) {
+            switch (cobertura) {
               case "Amplia":
                 basePrice = 8000 + Math.floor(Math.random() * 4000)
                 deducible = "10% del valor comercial"
@@ -282,7 +282,7 @@ export default function CatalogoPage() {
               `$${basePrice.toLocaleString()}`, // Prima Anual
               deducible, // Deducible
               gastosMedicos, // Gastos Médicos
-              coberturaDesc // Coberturas
+              coberturaDesc, // Coberturas
             )
           })
         })
@@ -298,15 +298,15 @@ export default function CatalogoPage() {
 
       // Ajustar ancho de columnas
       const colWidths = [
-        { wch: 8 },   // Número
-        { wch: 12 },  // Marca
-        { wch: 12 },  // Modelo
-        { wch: 8 },   // Año
-        { wch: 15 },  // Año nacimiento
-        { wch: 8 },   // CP
-        { wch: 12 },  // Género
+        { wch: 8 }, // Número
+        { wch: 12 }, // Marca
+        { wch: 12 }, // Modelo
+        { wch: 8 }, // Año
+        { wch: 15 }, // Año nacimiento
+        { wch: 8 }, // CP
+        { wch: 12 }, // Género
         // Repetir para cada aseguradora y cobertura (60 columnas más)
-        ...Array(60).fill({ wch: 18 })
+        ...Array(60).fill({ wch: 18 }),
       ]
       ws["!cols"] = colWidths
 
@@ -563,7 +563,12 @@ export default function CatalogoPage() {
                         <TableCell>{getStatusBadge(solicitud.estatus)}</TableCell>
                         <TableCell>
                           {solicitud.estatus === "Completado" ? (
-                            <Button variant="ghost" size="sm" className="h-8 px-2 text-[#8BC34A]" onClick={() => handleDownloadResults(solicitud)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-[#8BC34A]"
+                              onClick={() => handleDownloadResults(solicitud)}
+                            >
                               <Download className="h-4 w-4 mr-1" />
                               Descargar
                             </Button>
