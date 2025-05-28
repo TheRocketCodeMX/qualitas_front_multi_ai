@@ -458,10 +458,38 @@ export default function CatalogoPage() {
               break
             case "Fecha nacimiento":
               const dateStr = String(cellValue).trim()
-              // Validar formato de fecha (puede ser YYYY-MM-DD, DD/MM/YYYY, etc.)
-              const date = new Date(dateStr)
-              if (isNaN(date.getTime()) || date > new Date() || date.getFullYear() < 1900) {
-                rowErrors.push("Fecha nacimiento debe ser una fecha válida")
+              // Validar formato DD-MM-YYYY específicamente
+              const dateRegex = /^(\d{2})-(\d{2})-(\d{4})$/
+              const match = dateStr.match(dateRegex)
+
+              if (!match) {
+                rowErrors.push("Fecha nacimiento debe tener el formato DD-MM-YYYY (ejemplo: 25-04-1988)")
+              } else {
+                const [, day, month, year] = match
+                const dayNum = Number.parseInt(day, 10)
+                const monthNum = Number.parseInt(month, 10)
+                const yearNum = Number.parseInt(year, 10)
+
+                // Validar rangos válidos
+                if (dayNum < 1 || dayNum > 31) {
+                  rowErrors.push("Fecha nacimiento: el día debe estar entre 01 y 31")
+                }
+                if (monthNum < 1 || monthNum > 12) {
+                  rowErrors.push("Fecha nacimiento: el mes debe estar entre 01 y 12")
+                }
+                if (yearNum < 1900 || yearNum > new Date().getFullYear()) {
+                  rowErrors.push(`Fecha nacimiento: el año debe estar entre 1900 y ${new Date().getFullYear()}`)
+                }
+
+                // Validar que la fecha sea válida (no como 31-02-2024)
+                const testDate = new Date(yearNum, monthNum - 1, dayNum)
+                if (
+                  testDate.getDate() !== dayNum ||
+                  testDate.getMonth() !== monthNum - 1 ||
+                  testDate.getFullYear() !== yearNum
+                ) {
+                  rowErrors.push("Fecha nacimiento: la fecha no es válida (ejemplo: 31-02-2024 no existe)")
+                }
               }
               break
           }
