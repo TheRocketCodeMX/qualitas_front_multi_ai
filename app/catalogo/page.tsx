@@ -251,6 +251,99 @@ export default function CatalogoPage() {
     }
   }
 
+  // Función para manejar la carga de archivos
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null)
+    setUploadSuccess(null)
+
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const fileExt = file.name.split(".").pop()?.toLowerCase()
+    if (fileExt !== "xls" && fileExt !== "xlsx") {
+      setUploadError("Solo se permiten archivos Excel (.xls o .xlsx)")
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    }
+
+    const validMimeTypes = [
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/octet-stream",
+    ]
+
+    if (!validMimeTypes.includes(file.type)) {
+      setUploadError("El archivo no es un documento Excel válido")
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    }
+
+    setIsUploading(true)
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: "array" })
+
+        const firstSheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[firstSheetName]
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+
+        if (jsonData.length < 1) {
+          setUploadError("El archivo está vacío o no tiene el formato esperado")
+          setIsUploading(false)
+          return
+        }
+
+        const recordCount = jsonData.length - 1
+
+        // Crear nuevas solicitudes basadas en los registros cargados
+        const nuevasSolicitudes: Solicitud[] = []
+        const registrosPorSolicitud = 10 // Dividir en grupos de 10 registros
+
+        for (let i = 0; i < recordCount; i += registrosPorSolicitud) {
+          const registrosEnGrupo = Math.min(registrosPorSolicitud, recordCount - i)
+          const nuevaSolicitud: Solicitud = {
+            id: `SOL-${Date.now()}-${Math.floor(i / registrosPorSolicitud + 1)}`,
+            fechaCarga: new Date().toLocaleString("es-ES"),
+            numeroRegistros: registrosEnGrupo,
+            estatus: "En proceso",
+          }
+          nuevasSolicitudes.push(nuevaSolicitud)
+        }
+
+        setSolicitudes((prev) => [...prev, ...nuevasSolicitudes])
+        setShowSolicitudes(true)
+        setCurrentPage(1)
+
+        setUploadSuccess(
+          `Archivo cargado correctamente. ${recordCount} registros procesados en ${nuevasSolicitudes.length} solicitudes.`,
+        )
+
+        toast({
+          title: "Archivo cargado",
+          description: `Se han creado ${nuevasSolicitudes.length} solicitudes de procesamiento.`,
+          duration: 3000,
+        })
+      } catch (error) {
+        console.error("Error al procesar el archivo:", error)
+        setUploadError("Error al procesar el archivo. Verifica que sea un Excel válido.")
+      } finally {
+        setIsUploading(false)
+        if (fileInputRef.current) fileInputRef.current.value = ""
+      }
+    }
+
+    reader.onerror = () => {
+      setUploadError("Error al leer el archivo")
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+
+    reader.readAsArrayBuffer(file)
+  }
+
   const getStatusBadge = (estatus: Solicitud["estatus"]) => {
     switch (estatus) {
       case "En proceso":
