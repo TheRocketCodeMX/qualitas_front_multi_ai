@@ -177,14 +177,23 @@ export default function CotizadorPage() {
             Authorization: `Basic ${credentials}`,
             "Content-Type": "application/json",
           },
+          mode: "cors",
         },
       )
 
       if (!response.ok) {
-        throw new Error("Error al obtener las marcas")
+        const errorText = await response.text()
+        console.error("API Error:", response.status, errorText)
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
       }
 
       const marcasData: string[] = await response.json()
+
+      // Validate that we received an array
+      if (!Array.isArray(marcasData)) {
+        throw new Error("Formato de respuesta inválido")
+      }
+
       setMarcas(marcasData)
 
       // Clear dependent fields when new marcas are loaded
@@ -196,8 +205,19 @@ export default function CotizadorPage() {
       }))
     } catch (error) {
       console.error("Error fetching marcas:", error)
-      setMarcaError("Error al cargar las marcas. Inténtalo de nuevo.")
-      setMarcas([])
+
+      // For development/testing, provide mock data if API fails
+      const mockMarcas = ["Honda", "Toyota", "Nissan", "Volkswagen", "Chevrolet", "Ford"]
+      setMarcas(mockMarcas)
+      setMarcaError("Usando datos de prueba (API no disponible)")
+
+      // Clear dependent fields
+      setVehicleData((prev) => ({
+        ...prev,
+        marca: "",
+        modelo: "",
+        descripcion: "",
+      }))
     } finally {
       setIsLoadingMarcas(false)
     }
