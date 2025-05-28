@@ -181,6 +181,27 @@ export default function CotizadorPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Campo Año */}
+              <div className="space-y-2">
+                <Label htmlFor="año" className="text-sm font-medium text-gray-700">
+                  Año
+                </Label>
+                <Input
+                  id="año"
+                  placeholder="YYYY"
+                  value={vehicleData.año}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    // Solo permitir números y máximo 4 dígitos
+                    if (/^\d{0,4}$/.test(value)) {
+                      setVehicleData({ ...vehicleData, año: value })
+                    }
+                  }}
+                  maxLength={4}
+                  className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
+                />
+              </div>
+
               {/* Campo Marca */}
               <div className="space-y-2">
                 <Label htmlFor="marca" className="text-sm font-medium text-gray-700">
@@ -210,27 +231,6 @@ export default function CotizadorPage() {
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Campo Año */}
-              <div className="space-y-2">
-                <Label htmlFor="año" className="text-sm font-medium text-gray-700">
-                  Año
-                </Label>
-                <Input
-                  id="año"
-                  placeholder="YYYY"
-                  value={vehicleData.año}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    // Solo permitir números y máximo 4 dígitos
-                    if (/^\d{0,4}$/.test(value)) {
-                      setVehicleData({ ...vehicleData, año: value })
-                    }
-                  }}
-                  maxLength={4}
-                  className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                />
               </div>
 
               {/* Campo Modelo */}
@@ -286,8 +286,7 @@ export default function CotizadorPage() {
           </div>
         </div>
       </div>
-    </div>
-  )
+    )
 
   const renderStep2 = () => (
     <div className="space-y-6">
@@ -443,13 +442,12 @@ export default function CotizadorPage() {
           </div>
         </div>
       </div>
-    </div>
-  )
+    )
 
   // Pantalla de procesamiento
   if (isProcessing) {
     return (
-      <DashboardLayout>
+      <DashboardLayout>\
         <div className="min-h-[80vh] flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#8BC34A] mb-6"></div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Procesando su solicitud</h2>
@@ -476,5 +474,5 @@ export default function CotizadorPage() {
         {currentStep === 1 ? renderStep1() : renderStep2()}
       </div>
     </DashboardLayout>
-  )
+  )\
 }
