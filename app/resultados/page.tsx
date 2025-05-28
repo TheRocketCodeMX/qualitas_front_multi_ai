@@ -22,10 +22,10 @@ export default function ResultadosPage() {
   const [isEditMode, setIsEditMode] = useState(false)
 
   const [editableVehicleData, setEditableVehicleData] = useState({
-    marca: "",
-    año: "",
-    modelo: "",
-    descripcion: "",
+    marca: "Honda",
+    año: "2017",
+    modelo: "CRV",
+    descripcion: "Elegance 2WD",
   })
 
   const [editableUserData, setEditableUserData] = useState({
@@ -839,12 +839,13 @@ export default function ResultadosPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <span className="font-medium text-gray-900">
-                    {editableVehicleData.marca} - {editableVehicleData.año} - {editableVehicleData.modelo} -{" "}
-                    {editableVehicleData.descripcion}
+                    {editableVehicleData.marca || "Honda"} - {editableVehicleData.año || "2017"} -{" "}
+                    {editableVehicleData.modelo || "CRV"} - {editableVehicleData.descripcion || "Elegance 2WD"}
                   </span>
                   <span className="text-gray-600">•</span>
                   <span className="text-gray-600">
-                    {editableUserData.genero} - {editableUserData.fechaNacimiento} - {editableUserData.codigoPostal}
+                    {editableUserData.genero || "Femenino"} - {editableUserData.fechaNacimiento || "2001-02-01"} -{" "}
+                    {editableUserData.codigoPostal || "07310"}
                   </span>
                 </div>
                 <Button
