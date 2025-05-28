@@ -22,10 +22,10 @@ export default function ResultadosPage() {
   const [isEditMode, setIsEditMode] = useState(false)
 
   const [editableVehicleData, setEditableVehicleData] = useState({
-    marca: "Honda",
-    año: "2017",
-    modelo: "CRV",
-    descripcion: "Elegance 2WD",
+    marca: "",
+    año: "",
+    modelo: "",
+    descripcion: "",
   })
 
   const [editableUserData, setEditableUserData] = useState({
@@ -33,6 +33,18 @@ export default function ResultadosPage() {
     fechaNacimiento: "2001-02-01",
     codigoPostal: "07310",
   })
+
+  const [marcas, setMarcas] = useState<string[]>([])
+  const [isLoadingMarcas, setIsLoadingMarcas] = useState(false)
+  const [marcaError, setMarcaError] = useState("")
+
+  const [modelos, setModelos] = useState<string[]>([])
+  const [isLoadingModelos, setIsLoadingModelos] = useState(false)
+  const [modeloError, setModeloError] = useState("")
+
+  const [descripciones, setDescripciones] = useState<string[]>([])
+  const [isLoadingDescripciones, setIsLoadingDescripciones] = useState(false)
+  const [descripcionError, setDescripcionError] = useState("")
 
   if (isLoading) {
     return (
@@ -334,16 +346,171 @@ export default function ResultadosPage() {
     </div>
   )
 
+  const fetchMarcas = async (año: string) => {
+    if (!/^\d{4}$/.test(año)) {
+      return
+    }
+
+    setIsLoadingMarcas(true)
+    setMarcaError("")
+
+    try {
+      const username = "Proteg@apitherocketcode.com"
+      const password = "11ulaIWhR874O564"
+      const credentials = btoa(`${username}:${password}`)
+
+      const response = await fetch(
+        `https://api.catalogos.therocketcode.com/api/v1/catalogs/qualitas/brands-by-model?model=${año}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            "Content-Type": "application/json",
+          },
+          mode: "cors",
+        },
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("API Error:", response.status, errorText)
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      }
+
+      const marcasData: string[] = await response.json()
+
+      // Validate that we received an array
+      if (!Array.isArray(marcasData)) {
+        throw new Error("Formato de respuesta inválido")
+      }
+
+      setMarcas(marcasData)
+    } catch (error) {
+      console.error("Error fetching marcas:", error)
+
+      // For development/testing, provide mock data if API fails
+      const mockMarcas = ["Honda", "Toyota", "Nissan", "Volkswagen", "Chevrolet", "Ford"]
+      setMarcas(mockMarcas)
+      setMarcaError("Usando datos de prueba (API no disponible)")
+    } finally {
+      setIsLoadingMarcas(false)
+    }
+  }
+
+  const fetchModelos = async (año: string, marca: string) => {
+    if (!/^\d{4}$/.test(año) || !marca) {
+      return
+    }
+
+    setIsLoadingModelos(true)
+    setModeloError("")
+
+    try {
+      const username = "Proteg@apitherocketcode.com"
+      const password = "11ulaIWhR874O564"
+      const credentials = btoa(`${username}:${password}`)
+
+      const response = await fetch(
+        `https://api.catalogos.therocketcode.com/api/v1/catalogs/qualitas/subbrands?model=${año}&brand=${marca}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            "Content-Type": "application/json",
+          },
+          mode: "cors",
+        },
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("API Error:", response.status, errorText)
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      }
+
+      const modelosData: string[] = await response.json()
+
+      // Validate that we received an array
+      if (!Array.isArray(modelosData)) {
+        throw new Error("Formato de respuesta inválido")
+      }
+
+      setModelos(modelosData)
+    } catch (error) {
+      console.error("Error fetching modelos:", error)
+
+      // For development/testing, provide mock data if API fails
+      const mockModelos = ["CRV", "Civic", "Accord", "Pilot", "HR-V"]
+      setModelos(mockModelos)
+      setModeloError("Usando datos de prueba (API no disponible)")
+    } finally {
+      setIsLoadingModelos(false)
+    }
+  }
+
+  const fetchDescripciones = async (año: string, marca: string, modelo: string) => {
+    if (!/^\d{4}$/.test(año) || !marca || !modelo) {
+      return
+    }
+
+    setIsLoadingDescripciones(true)
+    setDescripcionError("")
+
+    try {
+      const username = "Proteg@apitherocketcode.com"
+      const password = "11ulaIWhR874O564"
+      const credentials = btoa(`${username}:${password}`)
+
+      const response = await fetch(
+        `https://api.catalogos.therocketcode.com/api/v1/catalogs/qualitas/description?model=${año}&brand=${marca}&subBrand=${modelo}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            "Content-Type": "application/json",
+          },
+          mode: "cors",
+        },
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("API Error:", response.status, errorText)
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      }
+
+      const descripcionesData: string[] = await response.json()
+
+      // Validate that we received an array
+      if (!Array.isArray(descripcionesData)) {
+        throw new Error("Formato de respuesta inválido")
+      }
+
+      setDescripciones(descripcionesData)
+    } catch (error) {
+      console.error("Error fetching descripciones:", error)
+
+      // For development/testing, provide mock data if API fails
+      const mockDescripciones = ["Elegance 2WD", "Sport 4WD", "Base", "LX 4P V6 3.5L AUT., 05 OCUP."]
+      setDescripciones(mockDescripciones)
+      setDescripcionError("Usando datos de prueba (API no disponible)")
+    } finally {
+      setIsLoadingDescripciones(false)
+    }
+  }
+
   const isFormValid = () => {
     return (
       editableVehicleData.marca.trim() !== "" &&
       editableVehicleData.año.trim() !== "" &&
+      /^\d{4}$/.test(editableVehicleData.año) &&
       editableVehicleData.modelo.trim() !== "" &&
       editableVehicleData.descripcion.trim() !== "" &&
       editableUserData.genero.trim() !== "" &&
       editableUserData.fechaNacimiento.trim() !== "" &&
       editableUserData.codigoPostal.trim() !== "" &&
-      editableUserData.codigoPostal.length === 5
+      editableUserData.codigoPostal.length === 5 &&
+      /^\d{5}$/.test(editableUserData.codigoPostal)
     )
   }
 
@@ -405,18 +572,7 @@ export default function ResultadosPage() {
                 <div className="space-y-4">
                   <h4 className="font-medium text-gray-700">Datos del vehículo</h4>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-marca" className="text-sm font-medium text-gray-700">
-                        Marca <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="edit-marca"
-                        value={editableVehicleData.marca}
-                        onChange={(e) => setEditableVehicleData({ ...editableVehicleData, marca: e.target.value })}
-                        className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                        required
-                      />
-                    </div>
+                    {/* Campo Año */}
                     <div className="space-y-2">
                       <Label htmlFor="edit-año" className="text-sm font-medium text-gray-700">
                         Año <span className="text-red-500">*</span>
@@ -426,41 +582,154 @@ export default function ResultadosPage() {
                         value={editableVehicleData.año}
                         onChange={(e) => {
                           const value = e.target.value
-                          if (/^\d*$/.test(value) && value.length <= 4) {
+                          // Solo permitir números y máximo 4 dígitos
+                          if (/^\d{0,4}$/.test(value)) {
                             setEditableVehicleData({ ...editableVehicleData, año: value })
+
+                            // Clear dependent fields if año is empty
+                            if (!value) {
+                              setEditableVehicleData((prev) => ({
+                                ...prev,
+                                año: value,
+                                marca: "",
+                                modelo: "",
+                                descripcion: "",
+                              }))
+                            }
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value
+                          if (value && /^\d{4}$/.test(value)) {
+                            // Fetch brands when year is entered
+                            fetchMarcas(value)
                           }
                         }}
                         className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
                         maxLength={4}
-                        pattern="[0-9]{4}"
                         required
                       />
                     </div>
+
+                    {/* Campo Marca */}
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-marca" className="text-sm font-medium text-gray-700">
+                        Marca <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={editableVehicleData.marca}
+                        onValueChange={(value) => {
+                          setEditableVehicleData({
+                            ...editableVehicleData,
+                            marca: value,
+                            modelo: "", // Clear modelo when marca changes
+                            descripcion: "", // Clear descripcion when marca changes
+                          })
+
+                          // Fetch modelos when marca changes
+                          if (value && editableVehicleData.año) {
+                            fetchModelos(editableVehicleData.año, value)
+                          }
+                        }}
+                        disabled={!editableVehicleData.año || isLoadingMarcas}
+                      >
+                        <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
+                          <SelectValue
+                            placeholder={
+                              isLoadingMarcas
+                                ? "Cargando marcas..."
+                                : !editableVehicleData.año
+                                  ? "Primero ingresa un año válido"
+                                  : "Selecciona una marca"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {marcas.map((marca, index) => (
+                            <SelectItem key={index} value={marca}>
+                              {marca}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {marcaError && <p className="text-xs text-red-500">{marcaError}</p>}
+                    </div>
+
+                    {/* Campo Modelo */}
                     <div className="space-y-2">
                       <Label htmlFor="edit-modelo" className="text-sm font-medium text-gray-700">
                         Modelo <span className="text-red-500">*</span>
                       </Label>
-                      <Input
-                        id="edit-modelo"
+                      <Select
                         value={editableVehicleData.modelo}
-                        onChange={(e) => setEditableVehicleData({ ...editableVehicleData, modelo: e.target.value })}
-                        className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                        required
-                      />
+                        onValueChange={(value) => {
+                          setEditableVehicleData({
+                            ...editableVehicleData,
+                            modelo: value,
+                            descripcion: "", // Clear descripcion when modelo changes
+                          })
+
+                          // Fetch descripciones when modelo changes
+                          if (value && editableVehicleData.año && editableVehicleData.marca) {
+                            fetchDescripciones(editableVehicleData.año, editableVehicleData.marca, value)
+                          }
+                        }}
+                        disabled={!editableVehicleData.marca || isLoadingModelos}
+                      >
+                        <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
+                          <SelectValue
+                            placeholder={
+                              isLoadingModelos
+                                ? "Cargando modelos..."
+                                : !editableVehicleData.marca
+                                  ? "Primero selecciona una marca"
+                                  : "Selecciona un modelo"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {modelos.map((modelo, index) => (
+                            <SelectItem key={index} value={modelo}>
+                              {modelo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {modeloError && <p className="text-xs text-red-500">{modeloError}</p>}
                     </div>
+
+                    {/* Campo Descripción */}
                     <div className="space-y-2">
                       <Label htmlFor="edit-descripcion" className="text-sm font-medium text-gray-700">
                         Descripción <span className="text-red-500">*</span>
                       </Label>
-                      <Input
-                        id="edit-descripcion"
+                      <Select
                         value={editableVehicleData.descripcion}
-                        onChange={(e) =>
-                          setEditableVehicleData({ ...editableVehicleData, descripcion: e.target.value })
+                        onValueChange={(value) =>
+                          setEditableVehicleData({ ...editableVehicleData, descripcion: value })
                         }
-                        className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                        required
-                      />
+                        disabled={!editableVehicleData.modelo || isLoadingDescripciones}
+                      >
+                        <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
+                          <SelectValue
+                            placeholder={
+                              isLoadingDescripciones
+                                ? "Cargando descripciones..."
+                                : !editableVehicleData.modelo
+                                  ? "Primero selecciona un modelo"
+                                  : "Selecciona una descripción"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {descripciones.map((descripcion, index) => (
+                            <SelectItem key={index} value={descripcion}>
+                              {descripcion}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {descripcionError && <p className="text-xs text-red-500">{descripcionError}</p>}
                     </div>
                   </div>
                 </div>
