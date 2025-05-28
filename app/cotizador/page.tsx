@@ -42,6 +42,10 @@ export default function CotizadorPage() {
   const [isLoadingMarcas, setIsLoadingMarcas] = useState(false)
   const [marcaError, setMarcaError] = useState("")
 
+  const [modelos, setModelos] = useState<string[]>([])
+  const [isLoadingModelos, setIsLoadingModelos] = useState(false)
+  const [modeloError, setModeloError] = useState("")
+
   useEffect(() => {
     setIsMounted(true)
   }, [])
@@ -233,6 +237,71 @@ export default function CotizadorPage() {
     }
   }
 
+  const fetchModelos = async (año: string, marca: string) => {
+    if (!/^\d{4}$/.test(año) || !marca) {
+      return
+    }
+
+    setIsLoadingModelos(true)
+    setModeloError("")
+
+    try {
+      const username = "Proteg@apitherocketcode.com"
+      const password = "Proteg@apitherocketcode.com"
+      const credentials = btoa(`${username}:${password}`)
+
+      const response = await fetch(
+        `https://api.catalogos.therocketcode.com/api/v1/catalogs/qualitas/subbrands?model=${año}&brand=${marca}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            "Content-Type": "application/json",
+          },
+          mode: "cors",
+        },
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("API Error:", response.status, errorText)
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      }
+
+      const modelosData: string[] = await response.json()
+
+      // Validate that we received an array
+      if (!Array.isArray(modelosData)) {
+        throw new Error("Formato de respuesta inválido")
+      }
+
+      setModelos(modelosData)
+
+      // Clear dependent fields when new models are loaded
+      setVehicleData((prev) => ({
+        ...prev,
+        modelo: "",
+        descripcion: "",
+      }))
+    } catch (error) {
+      console.error("Error fetching modelos:", error)
+
+      // For development/testing, provide mock data if API fails
+      const mockModelos = ["CRV", "Civic", "Accord", "Pilot", "HR-V"]
+      setModelos(mockModelos)
+      setModeloError("Usando datos de prueba (API no disponible)")
+
+      // Clear dependent fields
+      setVehicleData((prev) => ({
+        ...prev,
+        modelo: "",
+        descripcion: "",
+      }))
+    } finally {
+      setIsLoadingModelos(false)
+    }
+  }
+
   const renderStep1 = () => (
     <div className="space-y-6">
       {/* Vehicle Type Tabs */}
@@ -314,6 +383,13 @@ export default function CotizadorPage() {
                       modelo: "", // Clear modelo when marca changes
                       descripcion: "", // Clear descripcion when marca changes
                     })
+
+                    // Fetch modelos when marca changes
+                    if (value && vehicleData.año) {
+                      fetchModelos(vehicleData.año, value)
+                    } else {
+                      setModelos([])
+                    }
                   }}
                   disabled={marcas.length === 0 || isLoadingMarcas}
                 >
@@ -353,17 +429,30 @@ export default function CotizadorPage() {
                       descripcion: "", // Clear descripcion when modelo changes
                     })
                   }
-                  disabled={!vehicleData.marca}
+                  disabled={!vehicleData.marca || isLoadingModelos || modelos.length === 0}
                 >
                   <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
-                    <SelectValue placeholder={!vehicleData.marca ? "Primero selecciona una marca" : "Buscar modelo"} />
+                    <SelectValue
+                      placeholder={
+                        isLoadingModelos
+                          ? "Cargando modelos..."
+                          : !vehicleData.marca
+                            ? "Primero selecciona una marca"
+                            : modelos.length === 0
+                              ? "No hay modelos disponibles"
+                              : "Selecciona un modelo"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CRV">Honda CRV</SelectItem>
-                    <SelectItem value="Civic">Honda Civic</SelectItem>
-                    <SelectItem value="Accord">Honda Accord</SelectItem>
+                    {modelos.map((modelo, index) => (
+                      <SelectItem key={index} value={modelo}>
+                        {modelo}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {modeloError && <p className="text-xs text-red-500">{modeloError}</p>}
               </div>
 
               {/* Campo Descripción */}
