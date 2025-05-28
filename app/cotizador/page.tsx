@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthGuard } from "@/hooks/useAuthGuard"
 import DashboardLayout from "@/components/layout/DashboardLayout"
@@ -20,6 +20,7 @@ export default function CotizadorPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [selectedVehicle, setSelectedVehicle] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
 
   const [vehicleData, setVehicleData] = useState({
     marca: "",
@@ -40,6 +41,15 @@ export default function CotizadorPage() {
   const [marcas, setMarcas] = useState<string[]>([])
   const [isLoadingMarcas, setIsLoadingMarcas] = useState(false)
   const [marcaError, setMarcaError] = useState("")
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Don't render anything on the server
+  if (!isMounted) {
+    return null
+  }
 
   if (isLoading) {
     return (

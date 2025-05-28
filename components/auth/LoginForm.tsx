@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
@@ -21,9 +21,14 @@ export default function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
 
-  const { login } = useAuth()
+  const auth = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,13 +36,18 @@ export default function LoginForm() {
     setIsLoading(true)
 
     try {
-      await login({ email, password })
+      await auth.login({ email, password })
       router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Don't render anything on the server
+  if (!isMounted) {
+    return null
   }
 
   return (

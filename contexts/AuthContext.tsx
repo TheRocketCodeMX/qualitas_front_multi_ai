@@ -12,14 +12,23 @@ interface AuthContextType {
   isLoading: boolean
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+// Create a default context value to avoid the "must be used within a Provider" error
+const defaultContextValue: AuthContextType = {
+  user: null,
+  login: async () => {
+    console.error("AuthProvider not initialized")
+  },
+  logout: () => {
+    console.error("AuthProvider not initialized")
+  },
+  isAuthenticated: false,
+  isLoading: true,
+}
+
+const AuthContext = createContext<AuthContextType>(defaultContextValue)
 
 export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
+  return useContext(AuthContext)
 }
 
 interface AuthProviderProps {
@@ -32,38 +41,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Verificar si hay un token guardado al inicializar
-    const savedUser = localStorage.getItem("currentUser")
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser)
-        setUser(parsedUser)
-      } catch (error) {
-        localStorage.removeItem("currentUser")
+    try {
+      if (typeof window !== "undefined") {
+        const savedUser = localStorage.getItem("currentUser")
+        if (savedUser) {
+          try {
+            const parsedUser = JSON.parse(savedUser)
+            setUser(parsedUser)
+          } catch (error) {
+            localStorage.removeItem("currentUser")
+          }
+        }
       }
+    } catch (error) {
+      console.error("Error accessing localStorage:", error)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [])
 
   const login = async (credentials: LoginRequest): Promise<void> => {
     setIsLoading(true)
     try {
       // Simulación de API call - en un entorno real, esto sería una llamada a la API
-      // Comentamos la llamada real que causa el error
-      // const response = await fetch("/api/auth/login", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify(credentials),
-      // });
-
-      // if (!response.ok) {
-      //   throw new Error("Credenciales inválidas");
-      // }
-
-      // const userData: User = await response.json();
-
-      // Simulamos una respuesta exitosa
       await new Promise((resolve) => setTimeout(resolve, 800)) // Simular delay de red
 
       const userData: User = {
@@ -73,7 +73,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         token: "jwt-token-simulated-123456789",
       }
 
-      localStorage.setItem("currentUser", JSON.stringify(userData))
+      if (typeof window !== "undefined") {
+        localStorage.setItem("currentUser", JSON.stringify(userData))
+      }
       setUser(userData)
     } catch (error) {
       throw error
@@ -83,7 +85,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const logout = () => {
-    localStorage.removeItem("currentUser")
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("currentUser")
+    }
     setUser(null)
   }
 

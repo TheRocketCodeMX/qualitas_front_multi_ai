@@ -1,11 +1,22 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useAuthGuard } from "@/hooks/useAuthGuard"
 import DashboardLayout from "@/components/layout/DashboardLayout"
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card"
 
 export default function DashboardPage() {
   const { isAuthenticated, isLoading } = useAuthGuard()
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Don't render anything on the server
+  if (!isMounted) {
+    return null
+  }
 
   if (isLoading) {
     return (
