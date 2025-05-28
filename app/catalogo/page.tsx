@@ -151,7 +151,7 @@ export default function CatalogoPage() {
   // Función para descargar los resultados procesados
   const handleDownloadResults = (solicitud: Solicitud) => {
     try {
-      // Simular datos procesados con cotizaciones
+      // Crear headers para el Excel con estructura detallada
       const headers = [
         "Número",
         "Marca", 
@@ -160,39 +160,136 @@ export default function CatalogoPage() {
         "Año nacimiento",
         "CP",
         "Género",
-        "Aseguradora",
-        "Prima Anual",
-        "Deducible",
-        "Gastos Médicos",
-        "Estado Cotización"
+        // CHUBB
+        "CHUBB - Amplia - Prima Anual",
+        "CHUBB - Amplia - Deducible",
+        "CHUBB - Amplia - Gastos Médicos",
+        "CHUBB - Amplia - Coberturas",
+        "CHUBB - Limitada - Prima Anual",
+        "CHUBB - Limitada - Deducible", 
+        "CHUBB - Limitada - Gastos Médicos",
+        "CHUBB - Limitada - Coberturas",
+        "CHUBB - RC - Prima Anual",
+        "CHUBB - RC - Deducible",
+        "CHUBB - RC - Gastos Médicos", 
+        "CHUBB - RC - Coberturas",
+        // MAPFRE
+        "MAPFRE - Amplia - Prima Anual",
+        "MAPFRE - Amplia - Deducible",
+        "MAPFRE - Amplia - Gastos Médicos",
+        "MAPFRE - Amplia - Coberturas",
+        "MAPFRE - Limitada - Prima Anual",
+        "MAPFRE - Limitada - Deducible",
+        "MAPFRE - Limitada - Gastos Médicos",
+        "MAPFRE - Limitada - Coberturas",
+        "MAPFRE - RC - Prima Anual",
+        "MAPFRE - RC - Deducible",
+        "MAPFRE - RC - Gastos Médicos",
+        "MAPFRE - RC - Coberturas",
+        // GNP
+        "GNP - Amplia - Prima Anual",
+        "GNP - Amplia - Deducible",
+        "GNP - Amplia - Gastos Médicos",
+        "GNP - Amplia - Coberturas",
+        "GNP - Limitada - Prima Anual",
+        "GNP - Limitada - Deducible",
+        "GNP - Limitada - Gastos Médicos",
+        "GNP - Limitada - Coberturas",
+        "GNP - RC - Prima Anual",
+        "GNP - RC - Deducible",
+        "GNP - RC - Gastos Médicos",
+        "GNP - RC - Coberturas",
+        // HDI
+        "HDI - Amplia - Prima Anual",
+        "HDI - Amplia - Deducible",
+        "HDI - Amplia - Gastos Médicos",
+        "HDI - Amplia - Coberturas",
+        "HDI - Limitada - Prima Anual",
+        "HDI - Limitada - Deducible",
+        "HDI - Limitada - Gastos Médicos",
+        "HDI - Limitada - Coberturas",
+        "HDI - RC - Prima Anual",
+        "HDI - RC - Deducible",
+        "HDI - RC - Gastos Médicos",
+        "HDI - RC - Coberturas",
+        // AXA
+        "AXA - Amplia - Prima Anual",
+        "AXA - Amplia - Deducible",
+        "AXA - Amplia - Gastos Médicos",
+        "AXA - Amplia - Coberturas",
+        "AXA - Limitada - Prima Anual",
+        "AXA - Limitada - Deducible",
+        "AXA - Limitada - Gastos Médicos",
+        "AXA - Limitada - Coberturas",
+        "AXA - RC - Prima Anual",
+        "AXA - RC - Deducible",
+        "AXA - RC - Gastos Médicos",
+        "AXA - RC - Coberturas"
       ]
 
       // Generar datos de ejemplo para los resultados procesados
       const resultData = [headers]
       
+      const aseguradoras = ["CHUBB", "MAPFRE", "GNP", "HDI", "AXA"]
+      const marcas = ["Honda", "Toyota", "Nissan", "Volkswagen", "Chevrolet"]
+      const modelos = ["CRV", "Corolla", "Sentra", "Jetta", "Aveo"]
+      const coberturas = ["Amplia", "Limitada", "RC"]
+      
       for (let i = 1; i <= solicitud.numeroRegistros; i++) {
-        const aseguradoras = ["CHUBB", "MAPFRE", "GNP", "HDI", "AXA"]
-        const marcas = ["Honda", "Toyota", "Nissan", "Volkswagen", "Chevrolet"]
-        const modelos = ["CRV", "Corolla", "Sentra", "Jetta", "Aveo"]
+        const vehicleData = [
+          i, // Número
+          marcas[Math.floor(Math.random() * marcas.length)], // Marca
+          modelos[Math.floor(Math.random() * modelos.length)], // Modelo
+          2015 + Math.floor(Math.random() * 9), // Año 2015-2023
+          1970 + Math.floor(Math.random() * 35), // Año nacimiento 1970-2004
+          String(10000 + Math.floor(Math.random() * 90000)).substring(0, 5), // CP
+          Math.random() > 0.5 ? "Masculino" : "Femenino" // Género
+        ]
+
+        // Generar datos para cada aseguradora y cobertura
+        const insuranceData: any[] = []
         
-        // Generar múltiples cotizaciones por registro (una por aseguradora)
         aseguradoras.forEach(aseguradora => {
-          const row = [
-            i,
-            marcas[Math.floor(Math.random() * marcas.length)],
-            modelos[Math.floor(Math.random() * modelos.length)],
-            2015 + Math.floor(Math.random() * 9), // Año 2015-2023
-            1970 + Math.floor(Math.random() * 35), // Año nacimiento 1970-2004
-            String(10000 + Math.floor(Math.random() * 90000)).substring(0, 5), // CP
-            Math.random() > 0.5 ? "Masculino" : "Femenino",
-            aseguradora,
-            `$${(5000 + Math.floor(Math.random() * 10000)).toLocaleString()}`, // Prima
-            `${5 + Math.floor(Math.random() * 10)}% del valor comercial`, // Deducible
-            `$${(30000 + Math.floor(Math.random() * 170000)).toLocaleString()}`, // Gastos médicos
-            "Cotizado exitosamente"
-          ]
-          resultData.push(row)
+          coberturas.forEach(cobertura => {
+            let basePrice = 0
+            let deducible = ""
+            let gastosMedicos = ""
+            let coberturaDesc = ""
+
+            // Configurar precios base según cobertura
+            switch(cobertura) {
+              case "Amplia":
+                basePrice = 8000 + Math.floor(Math.random() * 4000)
+                deducible = "10% del valor comercial"
+                gastosMedicos = `$${(150000 + Math.floor(Math.random() * 100000)).toLocaleString()}`
+                coberturaDesc = "Robo total, Daños materiales, RC, Gastos médicos, Asistencia"
+                break
+              case "Limitada":
+                basePrice = 4000 + Math.floor(Math.random() * 2000)
+                deducible = "5% del valor comercial"
+                gastosMedicos = `$${(50000 + Math.floor(Math.random() * 50000)).toLocaleString()}`
+                coberturaDesc = "RC, Gastos médicos, Asistencia"
+                break
+              case "RC":
+                basePrice = 2500 + Math.floor(Math.random() * 1500)
+                deducible = "N/A"
+                gastosMedicos = `$${(30000 + Math.floor(Math.random() * 20000)).toLocaleString()}`
+                coberturaDesc = "Responsabilidad Civil únicamente"
+                break
+            }
+
+            insuranceData.push(
+              `$${basePrice.toLocaleString()}`, // Prima Anual
+              deducible, // Deducible
+              gastosMedicos, // Gastos Médicos
+              coberturaDesc // Coberturas
+            )
+          })
         })
+
+        // Combinar datos del vehículo con datos de seguros
+        const row = [...vehicleData, ...insuranceData]
+        resultData.push(row)
       }
 
       // Crear workbook y worksheet
@@ -208,16 +305,13 @@ export default function CatalogoPage() {
         { wch: 15 },  // Año nacimiento
         { wch: 8 },   // CP
         { wch: 12 },  // Género
-        { wch: 12 },  // Aseguradora
-        { wch: 15 },  // Prima Anual
-        { wch: 20 },  // Deducible
-        { wch: 15 },  // Gastos Médicos
-        { wch: 20 },  // Estado
+        // Repetir para cada aseguradora y cobertura (60 columnas más)
+        ...Array(60).fill({ wch: 18 })
       ]
       ws["!cols"] = colWidths
 
       // Agregar worksheet al workbook
-      XLSX.utils.book_append_sheet(wb, ws, "Resultados")
+      XLSX.utils.book_append_sheet(wb, ws, "Resultados Detallados")
 
       // Generar archivo y descargar
       const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" })
@@ -228,7 +322,7 @@ export default function CatalogoPage() {
 
       const link = document.createElement("a")
       link.href = url
-      link.download = `resultados_${solicitud.id}.xlsx`
+      link.download = `resultados_detallados_${solicitud.id}.xlsx`
       document.body.appendChild(link)
       link.click()
 
@@ -237,7 +331,7 @@ export default function CatalogoPage() {
 
       toast({
         title: "Resultados descargados",
-        description: `El archivo resultados_${solicitud.id}.xlsx se ha descargado correctamente.`,
+        description: `El archivo resultados_detallados_${solicitud.id}.xlsx se ha descargado correctamente.`,
         duration: 3000,
       })
     } catch (error) {
