@@ -125,9 +125,35 @@ export default function CatalogoPage() {
   const handleDownloadLayout = () => {
     try {
       const columns = ["Número", "Año", "Marca", "Modelo", "Descripción", "CP", "Género", "Fecha nacimiento"]
+      const exampleData = [
+        "1",
+        "2024",
+        "ALFA ROMEO",
+        "GIULIA",
+        "ESTREMA 4P L4 2.0T AUT., 05 OCUP.",
+        "55107",
+        "MASCULINO",
+        "25-04-1988",
+      ]
+
+      // Crear datos con encabezados y ejemplo
+      const layoutData = [columns, exampleData]
 
       const wb = XLSX.utils.book_new()
-      const ws = XLSX.utils.aoa_to_sheet([columns])
+      const ws = XLSX.utils.aoa_to_sheet(layoutData)
+
+      // Ajustar ancho de columnas para mejor visualización
+      const colWidths = [
+        { wch: 10 }, // Número
+        { wch: 8 }, // Año
+        { wch: 15 }, // Marca
+        { wch: 15 }, // Modelo
+        { wch: 35 }, // Descripción
+        { wch: 8 }, // CP
+        { wch: 12 }, // Género
+        { wch: 15 }, // Fecha nacimiento
+      ]
+      ws["!cols"] = colWidths
 
       XLSX.utils.book_append_sheet(wb, ws, "Layout")
 
@@ -146,7 +172,7 @@ export default function CatalogoPage() {
 
       toast({
         title: "Layout descargado",
-        description: "El archivo layout_consulta_masiva.xlsx se ha descargado correctamente.",
+        description: "El archivo layout_consulta_masiva.xlsx se ha descargado correctamente con ejemplo de llenado.",
         duration: 3000,
       })
     } catch (error) {
@@ -215,7 +241,6 @@ export default function CatalogoPage() {
         "HDI - Amplia - Prima Anual",
         "HDI - Amplia - Deducible",
         "HDI - Amplia - Gastos Médicos",
-        "HDI - Amplia - Coberturas",
         "HDI - Limitada - Prima Anual",
         "HDI - Limitada - Deducible",
         "HDI - Limitada - Gastos Médicos",
