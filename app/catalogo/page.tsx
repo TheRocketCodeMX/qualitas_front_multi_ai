@@ -148,97 +148,107 @@ export default function CatalogoPage() {
     }
   }
 
-  // Función para manejar la carga de archivos
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setUploadError(null)
-    setUploadSuccess(null)
+  // Función para descargar los resultados procesados
+  const handleDownloadResults = (solicitud: Solicitud) => {
+    try {
+      // Simular datos procesados con cotizaciones
+      const headers = [
+        "Número",
+        "Marca", 
+        "Modelo",
+        "Año",
+        "Año nacimiento",
+        "CP",
+        "Género",
+        "Aseguradora",
+        "Prima Anual",
+        "Deducible",
+        "Gastos Médicos",
+        "Estado Cotización"
+      ]
 
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const fileExt = file.name.split(".").pop()?.toLowerCase()
-    if (fileExt !== "xls" && fileExt !== "xlsx") {
-      setUploadError("Solo se permiten archivos Excel (.xls o .xlsx)")
-      if (fileInputRef.current) fileInputRef.current.value = ""
-      return
-    }
-
-    const validMimeTypes = [
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/octet-stream",
-    ]
-
-    if (!validMimeTypes.includes(file.type)) {
-      setUploadError("El archivo no es un documento Excel válido")
-      if (fileInputRef.current) fileInputRef.current.value = ""
-      return
-    }
-
-    setIsUploading(true)
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer)
-        const workbook = XLSX.read(data, { type: "array" })
-
-        const firstSheetName = workbook.SheetNames[0]
-        const worksheet = workbook.Sheets[firstSheetName]
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
-
-        if (jsonData.length < 1) {
-          setUploadError("El archivo está vacío o no tiene el formato esperado")
-          setIsUploading(false)
-          return
-        }
-
-        const recordCount = jsonData.length - 1
-
-        // Crear nuevas solicitudes basadas en los registros cargados
-        const nuevasSolicitudes: Solicitud[] = []
-        const registrosPorSolicitud = 10 // Dividir en grupos de 10 registros
-
-        for (let i = 0; i < recordCount; i += registrosPorSolicitud) {
-          const registrosEnGrupo = Math.min(registrosPorSolicitud, recordCount - i)
-          const nuevaSolicitud: Solicitud = {
-            id: `SOL-${Date.now()}-${Math.floor(i / registrosPorSolicitud + 1)}`,
-            fechaCarga: new Date().toLocaleString("es-ES"),
-            numeroRegistros: registrosEnGrupo,
-            estatus: "En proceso",
-          }
-          nuevasSolicitudes.push(nuevaSolicitud)
-        }
-
-        setSolicitudes((prev) => [...prev, ...nuevasSolicitudes])
-        setShowSolicitudes(true)
-        setCurrentPage(1)
-
-        setUploadSuccess(
-          `Archivo cargado correctamente. ${recordCount} registros procesados en ${nuevasSolicitudes.length} solicitudes.`,
-        )
-
-        toast({
-          title: "Archivo cargado",
-          description: `Se han creado ${nuevasSolicitudes.length} solicitudes de procesamiento.`,
-          duration: 3000,
+      // Generar datos de ejemplo para los resultados procesados
+      const resultData = [headers]
+      
+      for (let i = 1; i <= solicitud.numeroRegistros; i++) {
+        const aseguradoras = ["CHUBB", "MAPFRE", "GNP", "HDI", "AXA"]
+        const marcas = ["Honda", "Toyota", "Nissan", "Volkswagen", "Chevrolet"]
+        const modelos = ["CRV", "Corolla", "Sentra", "Jetta", "Aveo"]
+        
+        // Generar múltiples cotizaciones por registro (una por aseguradora)
+        aseguradoras.forEach(aseguradora => {
+          const row = [
+            i,
+            marcas[Math.floor(Math.random() * marcas.length)],
+            modelos[Math.floor(Math.random() * modelos.length)],
+            2015 + Math.floor(Math.random() * 9), // Año 2015-2023
+            1970 + Math.floor(Math.random() * 35), // Año nacimiento 1970-2004
+            String(10000 + Math.floor(Math.random() * 90000)).substring(0, 5), // CP
+            Math.random() > 0.5 ? "Masculino" : "Femenino",
+            aseguradora,
+            `$${(5000 + Math.floor(Math.random() * 10000)).toLocaleString()}`, // Prima
+            `${5 + Math.floor(Math.random() * 10)}% del valor comercial`, // Deducible
+            `$${(30000 + Math.floor(Math.random() * 170000)).toLocaleString()}`, // Gastos médicos
+            "Cotizado exitosamente"
+          ]
+          resultData.push(row)
         })
-      } catch (error) {
-        console.error("Error al procesar el archivo:", error)
-        setUploadError("Error al procesar el archivo. Verifica que sea un Excel válido.")
-      } finally {
-        setIsUploading(false)
-        if (fileInputRef.current) fileInputRef.current.value = ""
       }
-    }
 
-    reader.onerror = () => {
-      setUploadError("Error al leer el archivo")
-      setIsUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ""
-    }
+      // Crear workbook y worksheet
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.aoa_to_sheet(resultData)
 
-    reader.readAsArrayBuffer(file)
+      // Ajustar ancho de columnas
+      const colWidths = [
+        { wch: 8 },   // Número
+        { wch: 12 },  // Marca
+        { wch: 12 },  // Modelo
+        { wch: 8 },   // Año
+        { wch: 15 },  // Año nacimiento
+        { wch: 8 },   // CP
+        { wch: 12 },  // Género
+        { wch: 12 },  // Aseguradora
+        { wch: 15 },  // Prima Anual
+        { wch: 20 },  // Deducible
+        { wch: 15 },  // Gastos Médicos
+        { wch: 20 },  // Estado
+      ]
+      ws["!cols"] = colWidths
+
+      // Agregar worksheet al workbook
+      XLSX.utils.book_append_sheet(wb, ws, "Resultados")
+
+      // Generar archivo y descargar
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" })
+      const blob = new Blob([wbout], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      })
+      const url = URL.createObjectURL(blob)
+
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `resultados_${solicitud.id}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: "Resultados descargados",
+        description: `El archivo resultados_${solicitud.id}.xlsx se ha descargado correctamente.`,
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error al descargar los resultados:", error)
+      toast({
+        title: "Error",
+        description: "No se pudieron descargar los resultados. Inténtalo de nuevo.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
   }
 
   const getStatusBadge = (estatus: Solicitud["estatus"]) => {
@@ -366,7 +376,7 @@ export default function CatalogoPage() {
                         <TableCell>{getStatusBadge(solicitud.estatus)}</TableCell>
                         <TableCell>
                           {solicitud.estatus === "Completado" ? (
-                            <Button variant="ghost" size="sm" className="h-8 px-2 text-[#8BC34A]">
+                            <Button variant="ghost" size="sm" className="h-8 px-2 text-[#8BC34A]" onClick={() => handleDownloadResults(solicitud)}>
                               <Download className="h-4 w-4 mr-1" />
                               Descargar
                             </Button>
