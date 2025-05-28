@@ -46,6 +46,10 @@ export default function CotizadorPage() {
   const [isLoadingModelos, setIsLoadingModelos] = useState(false)
   const [modeloError, setModeloError] = useState("")
 
+  const [descripciones, setDescripciones] = useState<string[]>([])
+  const [isLoadingDescripciones, setIsLoadingDescripciones] = useState(false)
+  const [descripcionError, setDescripcionError] = useState("")
+
   useEffect(() => {
     setIsMounted(true)
   }, [])
@@ -302,6 +306,69 @@ export default function CotizadorPage() {
     }
   }
 
+  const fetchDescripciones = async (año: string, marca: string, modelo: string) => {
+    if (!/^\d{4}$/.test(año) || !marca || !modelo) {
+      return
+    }
+
+    setIsLoadingDescripciones(true)
+    setDescripcionError("")
+
+    try {
+      const username = "Proteg@apitherocketcode.com"
+      const password = "11ulaIWhR874O564"
+      const credentials = btoa(`${username}:${password}`)
+
+      const response = await fetch(
+        `https://api.catalogos.therocketcode.com/api/v1/catalogs/qualitas/description?model=${año}&brand=${marca}&subBrand=${modelo}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            "Content-Type": "application/json",
+          },
+          mode: "cors",
+        },
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("API Error:", response.status, errorText)
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      }
+
+      const descripcionesData: string[] = await response.json()
+
+      // Validate that we received an array
+      if (!Array.isArray(descripcionesData)) {
+        throw new Error("Formato de respuesta inválido")
+      }
+
+      setDescripciones(descripcionesData)
+
+      // Clear description field when new descriptions are loaded
+      setVehicleData((prev) => ({
+        ...prev,
+        descripcion: "",
+      }))
+    } catch (error) {
+      console.error("Error fetching descripciones:", error)
+
+      // For development/testing, provide mock data if API fails
+      const mockDescripciones = ["Elegance 2WD", "Sport 4WD", "Base", "LX 4P V6 3.5L AUT., 05 OCUP."]
+      setDescripciones(mockDescripciones)
+      setDescripcionError("Usando datos de prueba (API no disponible)")
+
+      // Clear description field
+      setVehicleData((prev) => ({
+        ...prev,
+        descripcion: "",
+      }))
+    } finally {
+      setIsLoadingDescripciones(false)
+    }
+  }
+
   const renderStep1 = () => (
     <div className="space-y-6">
       {/* Vehicle Type Tabs */}
@@ -422,13 +489,20 @@ export default function CotizadorPage() {
                 </Label>
                 <Select
                   value={vehicleData.modelo}
-                  onValueChange={(value) =>
+                  onValueChange={(value) => {
                     setVehicleData({
                       ...vehicleData,
                       modelo: value,
                       descripcion: "", // Clear descripcion when modelo changes
                     })
-                  }
+
+                    // Fetch descripciones when modelo changes
+                    if (value && vehicleData.año && vehicleData.marca) {
+                      fetchDescripciones(vehicleData.año, vehicleData.marca, value)
+                    } else {
+                      setDescripciones([])
+                    }
+                  }}
                   disabled={!vehicleData.marca || isLoadingModelos || modelos.length === 0}
                 >
                   <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
@@ -463,19 +537,30 @@ export default function CotizadorPage() {
                 <Select
                   value={vehicleData.descripcion}
                   onValueChange={(value) => setVehicleData({ ...vehicleData, descripcion: value })}
-                  disabled={!vehicleData.modelo}
+                  disabled={!vehicleData.modelo || isLoadingDescripciones || descripciones.length === 0}
                 >
                   <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
                     <SelectValue
-                      placeholder={!vehicleData.modelo ? "Primero selecciona un modelo" : "Seleccionar descripción"}
+                      placeholder={
+                        isLoadingDescripciones
+                          ? "Cargando descripciones..."
+                          : !vehicleData.modelo
+                            ? "Primero selecciona un modelo"
+                            : descripciones.length === 0
+                              ? "No hay descripciones disponibles"
+                              : "Selecciona una descripción"
+                      }
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Elegance 2WD">Elegance 2WD</SelectItem>
-                    <SelectItem value="Sport 4WD">Sport 4WD</SelectItem>
-                    <SelectItem value="Base">Base</SelectItem>
+                    {descripciones.map((descripcion, index) => (
+                      <SelectItem key={index} value={descripcion}>
+                        {descripcion}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {descripcionError && <p className="text-xs text-red-500">{descripcionError}</p>}
               </div>
             </div>
 
