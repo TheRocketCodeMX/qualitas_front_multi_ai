@@ -286,7 +286,8 @@ export default function CotizadorPage() {
           </div>
         </div>
       </div>
-    )
+    </div>
+  )
 
   const renderStep2 = () => (
     <div className="space-y-6">
@@ -442,12 +443,13 @@ export default function CotizadorPage() {
           </div>
         </div>
       </div>
-    )
+    </div>
+  )
 
   // Pantalla de procesamiento
   if (isProcessing) {
     return (
-      <DashboardLayout>\
+      <DashboardLayout>
         <div className="min-h-[80vh] flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#8BC34A] mb-6"></div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Procesando su solicitud</h2>
@@ -474,5 +476,5 @@ export default function CotizadorPage() {
         {currentStep === 1 ? renderStep1() : renderStep2()}
       </div>
     </DashboardLayout>
-  )\
+  )
 }
