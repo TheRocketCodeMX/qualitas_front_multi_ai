@@ -7,7 +7,7 @@ import { useAuthGuard } from "@/hooks/useAuthGuard"
 import DashboardLayout from "@/components/layout/DashboardLayout"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChevronLeft, ChevronRight, Download, Upload, RefreshCw, Eye } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Upload, RefreshCw, Eye } from 'lucide-react'
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -18,7 +18,7 @@ interface Solicitud {
   id: string
   fechaCarga: string
   numeroRegistros: number
-  estatus: "En proceso" | "Terminado" | "Completado"
+  estatus: "En proceso" | "Completado"
 }
 
 export default function CatalogoPage() {
@@ -67,13 +67,8 @@ export default function CatalogoPage() {
     setSolicitudes((prev) =>
       prev.map((solicitud) => {
         if (solicitud.estatus === "En proceso") {
-          // 30% de probabilidad de cambiar a "Terminado"
-          if (Math.random() < 0.3) {
-            return { ...solicitud, estatus: "Terminado" }
-          }
-        } else if (solicitud.estatus === "Terminado") {
-          // 50% de probabilidad de cambiar a "Completado"
-          if (Math.random() < 0.5) {
+          // 40% de probabilidad de cambiar a "Completado"
+          if (Math.random() < 0.4) {
             return { ...solicitud, estatus: "Completado" }
           }
         }
@@ -99,7 +94,6 @@ export default function CatalogoPage() {
   const totales = {
     total: solicitudes.length,
     enProceso: solicitudes.filter((s) => s.estatus === "En proceso").length,
-    terminado: solicitudes.filter((s) => s.estatus === "Terminado").length,
     completado: solicitudes.filter((s) => s.estatus === "Completado").length,
   }
 
@@ -251,8 +245,6 @@ export default function CatalogoPage() {
     switch (estatus) {
       case "En proceso":
         return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">🟡 En proceso</Badge>
-      case "Terminado":
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">🔵 Terminado</Badge>
       case "Completado":
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">🟢 Completado</Badge>
       default:
@@ -323,7 +315,7 @@ export default function CatalogoPage() {
             </div>
 
             {/* Resumen superior */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">Total de solicitudes</CardTitle>
@@ -339,15 +331,6 @@ export default function CatalogoPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-yellow-600">{totales.enProceso}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Terminadas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-blue-600">{totales.terminado}</div>
                 </CardContent>
               </Card>
 
@@ -382,10 +365,17 @@ export default function CatalogoPage() {
                         <TableCell>{solicitud.numeroRegistros}</TableCell>
                         <TableCell>{getStatusBadge(solicitud.estatus)}</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" className="h-8 px-2 text-[#8BC34A]">
-                            <Eye className="h-4 w-4 mr-1" />
-                            Ver detalles
-                          </Button>
+                          {solicitud.estatus === "Completado" ? (
+                            <Button variant="ghost" size="sm" className="h-8 px-2 text-[#8BC34A]">
+                              <Download className="h-4 w-4 mr-1" />
+                              Descargar
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-400" disabled>
+                              <Eye className="h-4 w-4 mr-1" />
+                              Procesando...
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
