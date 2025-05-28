@@ -166,7 +166,7 @@ export default function CotizadorPage() {
 
     try {
       const username = "Proteg@apitherocketcode.com"
-      const password = "Proteg@apitherocketcode.com"
+      const password = "11ulaIWhR874O564"
       const credentials = btoa(`${username}:${password}`)
 
       const response = await fetch(
