@@ -118,7 +118,7 @@ export default function CatalogoPage() {
   // Función para descargar el layout de Excel
   const handleDownloadLayout = () => {
     try {
-      const columns = ["Categoría", "Tipo", "Año", "Modelo", "Uso", "Fecha de nacimiento", "Sexo", "Teléfono"]
+      const columns = ["Número", "Marca", "Modelo", "Año", "Año nacimiento", "CP", "Género"]
 
       const wb = XLSX.utils.book_new()
       const ws = XLSX.utils.aoa_to_sheet([columns])
@@ -131,7 +131,7 @@ export default function CatalogoPage() {
 
       const link = document.createElement("a")
       link.href = url
-      link.download = "layout_cotizacion.xlsx"
+      link.download = "layout_consulta_masiva.xlsx"
       document.body.appendChild(link)
       link.click()
 
@@ -140,7 +140,7 @@ export default function CatalogoPage() {
 
       toast({
         title: "Layout descargado",
-        description: "El archivo layout_cotizacion.xlsx se ha descargado correctamente.",
+        description: "El archivo layout_consulta_masiva.xlsx se ha descargado correctamente.",
         duration: 3000,
       })
     } catch (error) {
