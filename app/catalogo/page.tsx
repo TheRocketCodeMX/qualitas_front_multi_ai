@@ -856,7 +856,7 @@ export default function CatalogoPage() {
                   <strong>Registros válidos:</strong> {validatedData.length}
                 </p>
                 <p>
-                  <strong>Solicitudes a crear:</strong> {Math.ceil(validatedData.length / 10)}
+                  <strong>Solicitudes a procesar:</strong> {Math.ceil(validatedData.length / 10)}
                 </p>
               </div>
             </div>
