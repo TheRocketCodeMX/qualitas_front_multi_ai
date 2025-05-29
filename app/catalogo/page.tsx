@@ -7,7 +7,7 @@ import { useAuthGuard } from "@/hooks/useAuthGuard"
 import DashboardLayout from "@/components/layout/DashboardLayout"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChevronLeft, ChevronRight, Download, Upload, RefreshCw, Eye } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Upload, RefreshCw, Eye, AlertCircle, CheckCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -646,32 +646,37 @@ export default function CatalogoPage() {
 
         {/* Mensajes de error/éxito */}
         {uploadError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{uploadError}</AlertDescription>
+          <Alert variant="destructive" className="mb-4 border-red-200 bg-red-50">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+            <AlertDescription className="text-red-600 font-medium">{uploadError}</AlertDescription>
           </Alert>
         )}
 
         {uploadSuccess && (
           <Alert className="mb-4 border-[#8BC34A] bg-[#F8FFF8]">
-            <AlertDescription className="text-[#8BC34A]">{uploadSuccess}</AlertDescription>
+            <CheckCircle className="h-5 w-5 text-[#8BC34A] mr-2" />
+            <AlertDescription className="text-[#8BC34A] font-medium">{uploadSuccess}</AlertDescription>
           </Alert>
         )}
 
         {validationErrors.length > 0 && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>
-              <div className="space-y-2">
-                <p className="font-medium">Errores de validación encontrados:</p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  {validationErrors.slice(0, 10).map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                  {validationErrors.length > 10 && (
-                    <li className="text-gray-600">... y {validationErrors.length - 10} errores más</li>
-                  )}
-                </ul>
-              </div>
-            </AlertDescription>
+          <Alert variant="destructive" className="mb-4 border-red-200 bg-red-50">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-medium text-red-600">Errores de validación encontrados:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-red-600">
+                    {validationErrors.slice(0, 10).map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                    {validationErrors.length > 10 && (
+                      <li className="text-red-500">... y {validationErrors.length - 10} errores más</li>
+                    )}
+                  </ul>
+                </div>
+              </AlertDescription>
+            </div>
           </Alert>
         )}
 
