@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, Search, Database, BarChart3, LogOut, ChevronLeft, User } from "lucide-react"
+import { Menu, Search, Database, LogOut, ChevronLeft, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Logo } from "@/components/ui/logo"
@@ -17,7 +17,6 @@ interface DashboardLayoutProps {
 const navigation = [
   { name: "Cotizador manual", href: "/cotizador", icon: Search },
   { name: "Catálogo de datos", href: "/catalogo", icon: Database },
-  { name: "Reportes", href: "/reportes", icon: BarChart3 },
 ]
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
