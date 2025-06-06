@@ -157,9 +157,9 @@ export default function CotizadorPage() {
     const insurerEndpoints = {
       HDI: "http://localhost:8080/cotizacion-api/api/cotizacion/1",
       Mapfre: "http://localhost:8080/cotizacion-api/api/cotizacion/3",
-      GNP: "http://localhost:8080/cotizacion-api/api/cotizacion/3", // Actualiza si tienes endpoint real
-      Chubb: "http://localhost:8080/cotizacion-api/api/cotizacion/4",
-      AXA: "http://localhost:8080/cotizacion-api/api/cotizacion/5",
+      GNP: "http://localhost:8080/cotizacion-api/api/cotizacion/5", // Actualiza si tienes endpoint real
+      Chubb: "http://localhost:8080/cotizacion-api/api/cotizacion/2", // Endpoint correcto para Chubb
+      AXA: "http://localhost:8080/cotizacion-api/api/cotizacion/4",
     }
 
     // Inicializar resultados en sessionStorage con loading

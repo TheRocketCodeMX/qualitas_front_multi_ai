@@ -514,6 +514,30 @@ export default function ResultadosPage() {
     )
   }
 
+  // Utilidad para obtener el precio más bajo y la aseguradora para cada plan
+  function getLowestPriceAndInsurer(plan: "amplia" | "limitada" | "rc") {
+    let minPrice = Number.POSITIVE_INFINITY
+    let minInsurer: any = null // Forzamos el tipo any para evitar el error de never
+    insurers.forEach((insurer) => {
+      if (insurer.isError || insurer.isLoading) return
+      const priceStr = insurer.prices?.[plan]
+      if (!priceStr || priceStr === "-") return
+      const price = Number.parseFloat(priceStr.replace(/[$,]/g, ""))
+      if (price < minPrice) {
+        minPrice = price
+        minInsurer = insurer
+      }
+    })
+    if (minInsurer && minPrice !== Number.POSITIVE_INFINITY) {
+      return {
+        price: `$${minPrice.toLocaleString("es-MX")}`,
+        insurer: minInsurer.name,
+        logo: minInsurer.logo,
+      }
+    }
+    return null
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -874,8 +898,20 @@ export default function ResultadosPage() {
               }`}
               onClick={() => setSelectedPlan("amplia")}
             >
-              <div className="text-base font-medium">Amplia</div>
-              <div className="text-xl font-bold mt-1">{insurers[0]?.prices?.amplia ?? "-"}</div>
+              <div className="text-base font-medium flex flex-col items-center justify-center gap-1">
+                Amplia
+                {(() => {
+                  const lowest = getLowestPriceAndInsurer("amplia")
+                  return lowest ? (
+                    <span className="flex items-center justify-center gap-1 text-xs font-semibold mt-1">
+                      <img src={lowest.logo} alt={lowest.insurer} className="w-5 h-5 object-contain inline-block mr-1" />
+                      {lowest.price} <span className="ml-1 text-gray-300">|</span> <span className="ml-1 text-gray-600">{lowest.insurer}</span>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400 mt-1">-</span>
+                  )
+                })()}
+              </div>
             </div>
             {/* Tab Limitada */}
             <div
@@ -886,8 +922,20 @@ export default function ResultadosPage() {
               }`}
               onClick={() => setSelectedPlan("limitada")}
             >
-              <div className="text-base font-medium">Limitada</div>
-              <div className="text-xl font-bold mt-1">{insurers[0]?.prices?.limitada ?? "-"}</div>
+              <div className="text-base font-medium flex flex-col items-center justify-center gap-1">
+                Limitada
+                {(() => {
+                  const lowest = getLowestPriceAndInsurer("limitada")
+                  return lowest ? (
+                    <span className="flex items-center justify-center gap-1 text-xs font-semibold mt-1">
+                      <img src={lowest.logo} alt={lowest.insurer} className="w-5 h-5 object-contain inline-block mr-1" />
+                      {lowest.price} <span className="ml-1 text-gray-300">|</span> <span className="ml-1 text-gray-600">{lowest.insurer}</span>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400 mt-1">-</span>
+                  )
+                })()}
+              </div>
             </div>
             {/* Tab RC */}
             <div
@@ -898,8 +946,20 @@ export default function ResultadosPage() {
               }`}
               onClick={() => setSelectedPlan("rc")}
             >
-              <div className="text-base font-medium">Responsabilidad civil</div>
-              <div className="text-xl font-bold mt-1">{insurers[0]?.prices?.rc ?? "-"}</div>
+              <div className="text-base font-medium flex flex-col items-center justify-center gap-1">
+                Responsabilidad civil
+                {(() => {
+                  const lowest = getLowestPriceAndInsurer("rc")
+                  return lowest ? (
+                    <span className="flex items-center justify-center gap-1 text-xs font-semibold mt-1">
+                      <img src={lowest.logo} alt={lowest.insurer} className="w-5 h-5 object-contain inline-block mr-1" />
+                      {lowest.price} <span className="ml-1 text-gray-300">|</span> <span className="ml-1 text-gray-600">{lowest.insurer}</span>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400 mt-1">-</span>
+                  )
+                })()}
+              </div>
             </div>
           </div>
         </div>
@@ -944,7 +1004,8 @@ export default function ResultadosPage() {
               let dynamicPrice = "-"
               let dynamicDeductible = "-"
               let dynamicMedicalExpenses = "-"
-              if (selectedCoverageKey && selectedCoverage) {
+              let noData = !selectedCoverage || Object.keys(selectedCoverage).length === 0
+              if (selectedCoverageKey && selectedCoverage && !noData) {
                 dynamicPrice = selectedCoverage.dPrecioTotal
                   ? `$${selectedCoverage.dPrecioTotal}`
                   : (insurer.prices?.[selectedCoverageKey as keyof typeof insurer.prices] ?? "-")
@@ -969,47 +1030,70 @@ export default function ResultadosPage() {
                       </div>
                       <span className="font-bold text-base text-gray-900 text-left">{insurer.name}</span>
                     </div>
-                    {/* Prima anual */}
-                    <div className="flex-1 text-center">
-                      {insurer.isLoading ? (
-                        <Skeleton className="mx-auto h-6 w-20 rounded bg-gray-200" />
-                      ) : (
-                        <span className="font-bold text-lg text-[#8BC34A]">{dynamicPrice}</span>
-                      )}
-                    </div>
-                    {/* Deducible */}
-                    <div className="flex-1 text-center">
-                      {insurer.isLoading ? (
-                        <Skeleton className="mx-auto h-5 w-16 rounded bg-gray-200" />
-                      ) : (
-                        <span className="font-semibold">{dynamicDeductible}</span>
-                      )}
-                    </div>
-                    {/* Gastos médicos */}
-                    <div className="flex-1 text-center">
-                      {insurer.isLoading ? (
-                        <Skeleton className="mx-auto h-5 w-16 rounded bg-gray-200" />
-                      ) : (
-                        <span className="font-semibold">{dynamicMedicalExpenses}</span>
-                      )}
-                    </div>
-                    {/* Botón de coberturas */}
-                    <div className="flex-1 flex justify-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-[#8BC34A] border-[#8BC34A] flex items-center gap-1"
-                        onClick={() => toggleExpanded(insurer.id)}
-                        disabled={insurer.isError || insurer.isLoading}
-                      >
-                        Coberturas
-                        {expandedInsurer === insurer.id ? (
-                          <ChevronUp className="w-4 h-4 ml-1" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 ml-1" />
-                        )}
-                      </Button>
-                    </div>
+                    {/* Si no hay datos, mostrar mensaje en un solo bloque que ocupe las 3 columnas */}
+                    {noData && !insurer.isLoading ? (
+                      <>
+                        <div className="flex-1 text-center col-span-3" style={{ flexBasis: '60%' }}>
+                          {!insurer.isError && <span className="text-xs text-gray-500 font-medium">No hay datos disponibles para esta cobertura</span>}
+                        </div>
+                        {/* Botón de coberturas deshabilitado */}
+                        <div className="flex-1 flex justify-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-[#8BC34A] border-[#8BC34A] flex items-center gap-1 opacity-50 cursor-not-allowed"
+                            disabled
+                          >
+                            Coberturas
+                            <ChevronDown className="w-4 h-4 ml-1" />
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Prima anual */}
+                        <div className="flex-1 text-center">
+                          {insurer.isLoading ? (
+                            <Skeleton className="mx-auto h-6 w-20 rounded bg-gray-200" />
+                          ) : (
+                            <span className="font-bold text-lg text-[#8BC34A]">{dynamicPrice}</span>
+                          )}
+                        </div>
+                        {/* Deducible */}
+                        <div className="flex-1 text-center">
+                          {insurer.isLoading ? (
+                            <Skeleton className="mx-auto h-5 w-16 rounded bg-gray-200" />
+                          ) : (
+                            <span className="font-semibold">{dynamicDeductible}</span>
+                          )}
+                        </div>
+                        {/* Gastos médicos */}
+                        <div className="flex-1 text-center">
+                          {insurer.isLoading ? (
+                            <Skeleton className="mx-auto h-5 w-16 rounded bg-gray-200" />
+                          ) : (
+                            <span className="font-semibold">{dynamicMedicalExpenses}</span>
+                          )}
+                        </div>
+                        {/* Botón de coberturas */}
+                        <div className="flex-1 flex justify-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-[#8BC34A] border-[#8BC34A] flex items-center gap-1"
+                            onClick={() => toggleExpanded(insurer.id)}
+                            disabled={insurer.isError || insurer.isLoading}
+                          >
+                            Coberturas
+                            {expandedInsurer === insurer.id ? (
+                              <ChevronUp className="w-4 h-4 ml-1" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 ml-1" />
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
                     {/* Error visual si aplica */}
                     {insurer.isError && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-10 rounded-lg">
@@ -1041,7 +1125,7 @@ export default function ResultadosPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-gray-500">No hay datos disponibles para esta cobertura.</div>
+                        !insurer.isError && <div className="text-gray-500">No hay datos disponibles para esta cobertura.</div>
                       )}
                     </div>
                   )}
