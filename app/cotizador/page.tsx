@@ -140,11 +140,88 @@ export default function CotizadorPage() {
     // Mostrar pantalla de procesamiento
     setIsProcessing(true)
 
-    // Simular tiempo de procesamiento (scraping)
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    // Construir el requestBody para el backend
+    const [yyyy, mm, dd] = userData.fechaNacimiento.split("-")
+    const fechaNacimientoBackend = `${dd}-${mm}-${yyyy}`
+    const requestBody = {
+      vBrand: vehicleData.marca,
+      vSubBrand: vehicleData.modelo,
+      vModel: vehicleData.año,
+      vDescription: vehicleData.descripcion,
+      vSexoPersona: userData.genero === "Hombre" ? "MASCULINO" : "FEMENINO",
+      vFechaNacimientoPersona: fechaNacimientoBackend,
+      vCodigoPostalPersona: userData.codigoPostal,
+    }
 
-    // Navegar a resultados
+    // Endpoints de ejemplo (ajusta según tus aseguradoras reales)
+    const insurerEndpoints = {
+      HDI: "http://localhost:8080/cotizacion-api/api/cotizacion/1",
+      Mapfre: "http://localhost:8080/cotizacion-api/api/cotizacion/3",
+      GNP: "http://localhost:8080/cotizacion-api/api/cotizacion/3", // Actualiza si tienes endpoint real
+      Chubb: "http://localhost:8080/cotizacion-api/api/cotizacion/4",
+      AXA: "http://localhost:8080/cotizacion-api/api/cotizacion/5",
+    }
+
+    // Inicializar resultados en sessionStorage con loading
+    if (typeof window !== "undefined") {
+      const loadingResults = selectedInsurers.map((insurer) => ({ insurer, loading: true }))
+      window.sessionStorage.setItem("cotizacionResultados", JSON.stringify(loadingResults))
+      window.sessionStorage.setItem("cotizadorVehiculo", JSON.stringify(vehicleData))
+      window.sessionStorage.setItem("cotizadorUsuario", JSON.stringify(userData))
+    }
+
+    // Navegar de inmediato a resultados
     router.push("/resultados")
+
+    // Hacer fetch por aseguradora y actualizar sessionStorage conforme llegan
+    await Promise.all(
+      selectedInsurers.map(async (insurer) => {
+        const endpoint = insurerEndpoints[insurer as keyof typeof insurerEndpoints]
+        if (!endpoint) {
+          updateResult(insurer, { insurer, error: "No endpoint definido", loading: false })
+          return
+        }
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+          })
+          if (!res.ok) throw new Error(`Error en ${insurer}`)
+          const data = await res.json()
+          // Mapeo especial para Mapfre si es necesario
+          if (insurer === "Mapfre" && data.success && Array.isArray(data.resultado)) {
+            const resultado = data.resultado[0]
+            const normalizado = {
+              AMPLIA: resultado.Amplia,
+              LIMITADA: resultado.Limitada,
+              RC: resultado.RC,
+            }
+            updateResult(insurer, { insurer, data: { ...data, resultado: [normalizado] }, loading: false })
+            return
+          }
+          updateResult(insurer, { insurer, data, loading: false })
+        } catch (err) {
+          updateResult(insurer, { insurer, error: err instanceof Error ? err.message : "Error desconocido", loading: false })
+        }
+      })
+    )
+  }
+
+  // Función para actualizar el resultado de una aseguradora en sessionStorage (con tipado)
+  function updateResult(insurer: string, newResult: any) {
+    if (typeof window !== "undefined") {
+      const prev = window.sessionStorage.getItem("cotizacionResultados")
+      let arr: any[] = []
+      try { arr = prev ? JSON.parse(prev) : [] } catch { arr = [] }
+      const idx = arr.findIndex((r: any) => r.insurer === insurer)
+      if (idx !== -1) {
+        arr[idx] = newResult
+      } else {
+        arr.push(newResult)
+      }
+      window.sessionStorage.setItem("cotizacionResultados", JSON.stringify(arr))
+    }
   }
 
   const calcularEdad = (fechaNacimiento: string): number | null => {

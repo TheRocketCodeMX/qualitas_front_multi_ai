@@ -22,19 +22,25 @@ export default function NewQuotePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
 
-  const [formData, setFormData] = useState<QuoteRequest>({
+  const [formData, setFormData] = useState<QuoteRequest & {
+    vehicleInfo: QuoteRequest["vehicleInfo"] & { description?: string }
+    personalInfo: QuoteRequest["personalInfo"] & { birthdate?: string; postalCode?: string }
+  }>({
     insuranceType: "auto",
     personalInfo: {
       age: 0,
       gender: "M",
-      location: "cdmx", // Updated default value
+      location: "cdmx",
       currentInsurer: "",
+      birthdate: "",
+      postalCode: "",
     },
     vehicleInfo: {
       brand: "",
       model: "",
       year: new Date().getFullYear(),
       value: 0,
+      description: "",
     },
   })
 
@@ -59,26 +65,83 @@ export default function NewQuotePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("[DEBUG] handleSubmit ejecutado");
     setIsSubmitting(true)
     setError("")
 
+    // Lista de aseguradoras y sus endpoints
+    const insurers = [
+      {
+        id: "hdi",
+        name: "HDI",
+        endpoint: "http://localhost:8080/cotizacion-api/api/cotizacion/1",
+      },
+      // Puedes agregar más aseguradoras aquí
+    ]
+
+    // Validar que los datos requeridos estén completos y sean válidos
+    const { brand, model, year, value, description } = formData.vehicleInfo
+    const { gender, age, location, birthdate, postalCode } = formData.personalInfo
+    if (
+      !brand ||
+      !model ||
+      !description ||
+      !gender ||
+      !location ||
+      !birthdate ||
+      !postalCode ||
+      age < 18 ||
+      year < 1990 ||
+      value <= 0
+    ) {
+      console.log("[DEBUG] Validación bloqueada", { brand, model, year, value, description, gender, age, location, birthdate, postalCode });
+      setError("Por favor completa todos los campos obligatorios y asegúrate de que los valores sean válidos antes de cotizar.")
+      setIsSubmitting(false)
+      return
+    }
+
+    // Mapear los datos del formulario al formato esperado por el endpoint
+    const requestBody = {
+      vBrand: brand,
+      vSubBrand: model,
+      vModel: String(year),
+      vDescription: description,
+      vValorVehiculo: value,
+      vSexoPersona: gender === "M" ? "MASCULINO" : "FEMENINO",
+      vFechaNacimientoPersona: birthdate,
+      vCodigoPostalPersona: postalCode,
+    }
+
+    console.log("[DEBUG] Enviando cotización", requestBody)
+
     try {
-      // Simulación de API call
-      const response = await fetch("/api/quotes/request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(formData),
-      })
+      // Ejecutar todas las solicitudes en paralelo
+      const results = await Promise.all(
+        insurers.map(async (insurer) => {
+          try {
+            const res = await fetch(insurer.endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(requestBody),
+            })
+            if (!res.ok) {
+              throw new Error(`Error en ${insurer.name}`)
+            }
+            const data = await res.json()
+            return { insurer: insurer.name, data }
+          } catch (err) {
+            return { insurer: insurer.name, error: err instanceof Error ? err.message : "Error desconocido" }
+          }
+        })
+      )
 
-      if (!response.ok) {
-        throw new Error("Error al procesar la cotización")
+      // Guardar resultados en sessionStorage
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("cotizacionResultados", JSON.stringify(results))
       }
-
-      const result = await response.json()
-      router.push(`/quotes/results/${result.requestId}`)
+      router.push("/resultados")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al procesar la cotización")
     } finally {
@@ -190,7 +253,38 @@ export default function NewQuotePage() {
             </SelectContent>
           </Select>
         </div>
-
+        <div className="space-y-2">
+          <Label htmlFor="birthdate">Fecha de nacimiento</Label>
+          <Input
+            id="birthdate"
+            type="date"
+            value={formData.personalInfo.birthdate || ""}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                personalInfo: { ...formData.personalInfo, birthdate: e.target.value },
+              })
+            }
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="postalCode">Código Postal</Label>
+          <Input
+            id="postalCode"
+            type="text"
+            maxLength={5}
+            pattern="[0-9]{5}"
+            value={formData.personalInfo.postalCode || ""}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                personalInfo: { ...formData.personalInfo, postalCode: e.target.value },
+              })
+            }
+            required
+          />
+        </div>
         <div className="space-y-2">
           <Label htmlFor="currentInsurer">Aseguradora Actual (Opcional)</Label>
           <Select
@@ -221,6 +315,7 @@ export default function NewQuotePage() {
   )
 
   const renderStep3 = () => {
+    console.log("[DEBUG] Renderizando paso 3 (formulario de vehículo)");
     if (formData.insuranceType === "auto") {
       return (
         <Card>
@@ -307,6 +402,21 @@ export default function NewQuotePage() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción</Label>
+              <Input
+                id="description"
+                value={formData.vehicleInfo?.description || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    vehicleInfo: { ...formData.vehicleInfo!, description: e.target.value },
+                  })
+                }
+                placeholder="Ej: SDRIVE 18I 5P L3 1.5L TURBO ABS BA 2 AC R17 AUT 5 OCUP"
+                required
+              />
+            </div>
           </CardContent>
         </Card>
       )
@@ -378,13 +488,12 @@ export default function NewQuotePage() {
             >
               Anterior
             </Button>
-
             {currentStep < 3 ? (
               <Button type="button" onClick={() => setCurrentStep(currentStep + 1)}>
                 Siguiente
               </Button>
             ) : (
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} onClick={() => console.log("[DEBUG] Click en submit")}>
                 {isSubmitting ? "Procesando..." : "Obtener Cotizaciones"}
               </Button>
             )}

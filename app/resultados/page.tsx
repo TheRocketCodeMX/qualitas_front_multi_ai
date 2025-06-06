@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthGuard } from "@/hooks/useAuthGuard"
 import DashboardLayout from "@/components/layout/DashboardLayout"
@@ -12,6 +12,13 @@ import Image from "next/image"
 import * as XLSX from "xlsx"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
+
+// Definir vehicleTypes para evitar error de variable no definida
+const vehicleTypes = [
+  { id: "auto", label: "Auto/SUV", icon: Car, disabled: false },
+  // Puedes agregar más tipos si lo necesitas
+]
 
 export default function ResultadosPage() {
   const { isAuthenticated, isLoading } = useAuthGuard()
@@ -46,6 +53,42 @@ export default function ResultadosPage() {
   const [isLoadingDescripciones, setIsLoadingDescripciones] = useState(false)
   const [descripcionError, setDescripcionError] = useState("")
 
+  // Estado para los resultados de cotización
+  const [cotizacionResultados, setCotizacionResultados] = useState<any[] | null>(null)
+
+  // Estado para la cobertura seleccionada por aseguradora expandida
+  const [selectedCoverageByInsurer, setSelectedCoverageByInsurer] = useState<Record<string, string>>({})
+
+  // Leer datos del vehículo y usuario reales desde sessionStorage si existen
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const data = window.sessionStorage.getItem("cotizacionResultados")
+      if (data) {
+        setCotizacionResultados(JSON.parse(data))
+      }
+      // Leer datos del vehículo y usuario si existen
+      const vehiculo = window.sessionStorage.getItem("cotizadorVehiculo")
+      if (vehiculo) {
+        setEditableVehicleData(JSON.parse(vehiculo))
+      }
+      const usuario = window.sessionStorage.getItem("cotizadorUsuario")
+      if (usuario) {
+        setEditableUserData(JSON.parse(usuario))
+      }
+    }
+  }, [])
+
+  // Sondeo dinámico de resultados en sessionStorage
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const data = window.sessionStorage.getItem("cotizacionResultados")
+      if (data) {
+        setCotizacionResultados(JSON.parse(data))
+      }
+    }, 2000) // cada 2 segundos
+    return () => clearInterval(interval)
+  }, [])
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -58,75 +101,84 @@ export default function ResultadosPage() {
     return null
   }
 
-  const vehicleTypes = [{ id: "auto", label: "Auto/SUV", icon: Car, disabled: false }]
+  // Si no hay resultados, mostrar mensaje
+  if (!cotizacionResultados) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen flex flex-col items-center justify-center">
+          <h2 className="text-2xl font-bold mb-4">No hay resultados de cotización</h2>
+          <Button onClick={() => router.push("/quotes/new")}>Realizar una cotización</Button>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
-  const insurers = [
-    {
-      id: "chubb",
-      name: "CHUBB",
-      logo: "/images/chubb-logo.png",
-      prices: {
-        amplia: "$9,123",
-        limitada: "$5,123",
-        rc: "$4,123",
-      },
-      deductible: "10% del valor comercial",
-      medicalExpenses: "$200,000",
-      isHighlighted: true,
-    },
-    {
-      id: "mapfre",
-      name: "MAPFRE",
-      logo: "/images/mapfre-logo.png",
-      prices: {
-        amplia: "$8,651",
-        limitada: "$4,890",
-        rc: "$3,890",
-      },
-      deductible: "10% del valor comercial",
-      medicalExpenses: "$40,000 por ocupante",
+  // Mapear los resultados a la estructura de aseguradoras para mostrar dinámicamente
+  const insurers = cotizacionResultados.map((res) => {
+    if (res.loading) {
+      return {
+        id: res.insurer.toLowerCase(),
+        name: res.insurer,
+        logo: `/images/${res.insurer.toLowerCase()}-logo.png`,
+        isLoading: true,
+        isError: false,
+      }
+    }
+    // Si la respuesta tiene success: false, mostrar mensaje de error
+    if (res.data && res.data.success === false) {
+      return {
+        id: res.insurer.toLowerCase(),
+        name: res.insurer,
+        logo: `/images/${res.insurer.toLowerCase()}-logo.png`,
+        error: res.data.message || "Datos no disponibles para esta aseguradora",
+        isError: true,
+      }
+    }
+    // Adaptar el mapeo según la estructura real de tu respuesta para HDI
+    let resultado = res.data?.resultado?.[0] || {}
+    let isHDI = res.insurer.toLowerCase() === "hdi"
+    let prices, deductible, medicalExpenses, coveragesRaw
+    if (isHDI) {
+      // Para HDI: PREMIUM = Amplia, AMPLIA = Limitada, LIMITADA = RC
+      prices = {
+        amplia: resultado.PREMIUM?.dPrecioTotal ? `$${resultado.PREMIUM.dPrecioTotal}` : "-",
+        limitada: resultado.AMPLIA?.dPrecioTotal ? `$${resultado.AMPLIA.dPrecioTotal}` : "-",
+        rc: resultado.LIMITADA?.dPrecioTotal ? `$${resultado.LIMITADA.dPrecioTotal}` : "-",
+      }
+      deductible = resultado.PREMIUM?.iDanoVehiculo !== undefined ? `${resultado.PREMIUM.iDanoVehiculo}%` : "-"
+      medicalExpenses = resultado.PREMIUM?.dGastosMedicos || "-"
+      coveragesRaw = {
+        amplia: resultado.PREMIUM || {},
+        limitada: resultado.AMPLIA || {},
+        rc: resultado.LIMITADA || {},
+      }
+    } else {
+      // Default: mantener el mapeo anterior
+      prices = {
+        amplia: resultado.AMPLIA?.dPrecioTotal ? `$${resultado.AMPLIA.dPrecioTotal}` : "-",
+        limitada: resultado.LIMITADA?.dPrecioTotal ? `$${resultado.LIMITADA.dPrecioTotal}` : "-",
+        rc: resultado.PREMIUM?.dPrecioTotal ? `$${resultado.PREMIUM.dPrecioTotal}` : "-",
+      }
+      deductible = resultado.AMPLIA?.deductible || "-"
+      medicalExpenses = resultado.AMPLIA?.dGastosMedicos || "-"
+      coveragesRaw = {
+        amplia: resultado.AMPLIA || {},
+        limitada: resultado.LIMITADA || {},
+        rc: resultado.PREMIUM || {},
+      }
+    }
+    return {
+      id: res.insurer.toLowerCase(),
+      name: res.insurer,
+      logo: `/images/${res.insurer.toLowerCase()}-logo.png`,
+      prices,
+      deductible,
+      medicalExpenses,
+      coveragesRaw, // Guardar el objeto de coberturas crudo
       isHighlighted: false,
-    },
-    {
-      id: "gnp",
-      name: "GNP",
-      logo: "/images/gnp-logo.png",
-      prices: {
-        amplia: "$8,454",
-        limitada: "$4,750",
-        rc: "$3,750",
-      },
-      deductible: "10% del valor comercial",
-      medicalExpenses: "$40,000 por ocupante",
-      isHighlighted: false,
-    },
-    {
-      id: "hdi",
-      name: "HDI",
-      logo: "/images/hdi-logo.png",
-      prices: {
-        amplia: "$8,320",
-        limitada: "$4,650",
-        rc: "$3,650",
-      },
-      deductible: "5% del valor comercial",
-      medicalExpenses: "$50,000 por ocupante",
-      isHighlighted: false,
-    },
-    {
-      id: "axa",
-      name: "AXA",
-      logo: "/images/axa-logo.png",
-      prices: {
-        amplia: "$8,890",
-        limitada: "$4,990",
-        rc: "$3,990",
-      },
-      deductible: "10% del valor comercial",
-      medicalExpenses: "$100,000",
-      isHighlighted: false,
-    },
-  ]
+      isError: false,
+    }
+  })
 
   const toggleExpanded = (insurerId: string) => {
     setExpandedInsurer(expandedInsurer === insurerId ? null : insurerId)
@@ -169,7 +221,7 @@ export default function ResultadosPage() {
           vehicleInfo,
           userInfo,
           insurer.name,
-          insurer.prices[selectedPlan],
+          insurer.prices?.[selectedPlan] ?? "-",
           insurer.deductible,
           insurer.medicalExpenses,
           "Valor comercial al momento del siniestro",
@@ -227,122 +279,71 @@ export default function ResultadosPage() {
     }
   }
 
-  const getSortedInsurers = () => {
-    if (sortOrder === "default") {
-      return insurers
-    }
-
-    const sorted = [...insurers].sort((a, b) => {
-      // Convert price strings to numbers for comparison
-      const priceA = Number.parseFloat(a.prices[selectedPlan].replace(/[$,]/g, ""))
-      const priceB = Number.parseFloat(b.prices[selectedPlan].replace(/[$,]/g, ""))
-
-      if (sortOrder === "asc") {
-        return priceA - priceB
-      } else {
-        return priceB - priceA
-      }
+  // Ordenar aseguradoras por precio del plan seleccionado (las que tienen error van al final)
+  function getSortedInsurers() {
+    return insurers.slice().sort((a, b) => {
+      // Si alguno tiene error, lo manda al final
+      if (a.isError && !b.isError) return 1
+      if (!a.isError && b.isError) return -1
+      if (a.isError && b.isError) return 0
+      // Ambos tienen prices
+      const priceA =
+        a.prices && a.prices[selectedPlan]
+          ? Number.parseFloat(a.prices[selectedPlan].replace(/[$,]/g, ""))
+          : Number.POSITIVE_INFINITY
+      const priceB =
+        b.prices && b.prices[selectedPlan]
+          ? Number.parseFloat(b.prices[selectedPlan].replace(/[$,]/g, ""))
+          : Number.POSITIVE_INFINITY
+      return priceA - priceB
     })
-
-    return sorted
   }
 
-  const renderCoverageDetails = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 p-6 bg-gray-50 rounded-lg">
-      {/* Robo total */}
-      <div className="space-y-3">
-        <div className="flex items-center space-x-2">
-          <Shield className="w-4 h-4 text-gray-600" />
-          <h4 className="font-medium text-gray-900">Robo total</h4>
-        </div>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>Ampara el robo total del vehículo asegurado.</p>
-          <p>
-            <strong>Suma asegurada:</strong> Valor comercial al momento del siniestro
-          </p>
-          <p>
-            <strong>Deducible:</strong> 10% del valor comercial
-          </p>
-        </div>
-      </div>
+  // Utilidad para transformar claves a formato legible
+  function humanizeKey(key: string) {
+    // Quitar prefijos comunes y separar camelCase o snake_case
+    return key
+      .replace(/^([A-Z])/, (m) => m.toUpperCase())
+      .replace(/^([DVBI])/, "") // Quitar prefijos tipo D, V, B, I
+      .replace(/([A-Z])/g, " $1")
+      .replace(/_/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/^\s+|\s+$/g, "")
+      .replace(/\b([a-z])/g, (m) => m.toUpperCase())
+  }
 
-      {/* Responsabilidad civil */}
-      <div className="space-y-3">
-        <div className="flex items-center space-x-2">
-          <Umbrella className="w-4 h-4 text-gray-600" />
-          <h4 className="font-medium text-gray-900">Responsabilidad civil por daños a terceros</h4>
-        </div>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>Cubre los daños que el asegurado cause a terceros en sus bienes o personas, al conducir el vehículo.</p>
-          <p>
-            <strong>Daños a bienes de terceros:</strong> Hasta $1,500,000 MXN
-          </p>
-          <p>
-            <strong>Daños corporales a terceros:</strong> Hasta $3,000,000 MXN
-          </p>
-          <p>
-            <strong>Fianza legal:</strong> Incluida hasta $50,000 MXN
-          </p>
-        </div>
-      </div>
-
-      {/* Servicios de asistencia */}
-      <div className="space-y-3">
-        <div className="flex items-center space-x-2">
-          <DollarSign className="w-4 h-4 text-gray-600" />
-          <h4 className="font-medium text-gray-900">Servicios de asistencia (vial y en viajes)</h4>
-        </div>
-        <div className="text-sm text-gray-600">
-          <p>Servicios adicionales incluidos:</p>
-          <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Arrastre con grúa hasta 100 km.</li>
-            <li>Paso de corriente.</li>
-            <li>Envío de gasolina (costo de gasolina no incluido).</li>
-            <li>Cambio de llanta.</li>
-            <li>Asistencia legal en caso de accidente (abogados, gestoría).</li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Daños materiales */}
-      <div className="space-y-3">
-        <div className="flex items-center space-x-2">
-          <Shield className="w-4 h-4 text-gray-600" />
-          <h4 className="font-medium text-gray-900">Daños materiales</h4>
-        </div>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>
-            Cubre los daños físicos al vehículo asegurado a consecuencia de colisiones, vuelcos, fenómenos naturales
-            (inundaciones, granizo), vandalismo, entre otros.
-          </p>
-          <p>
-            <strong>Suma asegurada:</strong> Valor comercial
-          </p>
-          <p>
-            <strong>Deducible:</strong> 5% del valor comercial
-          </p>
-        </div>
-      </div>
-
-      {/* Gastos médicos */}
-      <div className="space-y-3 md:col-span-2">
-        <div className="flex items-center space-x-2">
-          <Shield className="w-4 h-4 text-gray-600" />
-          <h4 className="font-medium text-gray-900">Gastos médicos a ocupantes</h4>
-        </div>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>
-            Ampara el pago de gastos médicos por lesiones corporales sufridas por el conductor y ocupantes del vehículo
-            asegurado, derivadas de un accidente automovilístico.
-          </p>
-          <p>
-            <strong>Suma asegurada por persona:</strong> $100,000 MXN
-          </p>
-          <p>
-            <strong>Límite por evento:</strong> $500,000 MXN
-          </p>
-        </div>
-      </div>
+  // Renderizado visual mejorado de detalles de cobertura
+  const renderCoverageDetails = (coverageObj: any) => (
+    <div className="w-full bg-gray-50 rounded-lg p-6 mt-2">
+      <h4 className="font-semibold text-gray-900 mb-4">Detalles de la cobertura seleccionada</h4>
+      {coverageObj && Object.keys(coverageObj).length > 0 ? (
+        <table className="min-w-full text-sm border rounded overflow-hidden">
+          <tbody>
+            {Object.entries(coverageObj).map(([key, value], idx) => (
+              <tr key={key} className={idx % 2 === 0 ? "bg-white" : "bg-gray-100"}>
+                <td className="font-medium text-gray-700 py-2 pr-4 capitalize w-1/3">{humanizeKey(key)}</td>
+                <td className="py-2 text-gray-900 w-2/3">
+                  {typeof value === "boolean" ? (
+                    <span
+                      className={`inline-block px-2 py-1 rounded text-xs font-bold ${
+                        value ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {value ? "Sí" : "No"}
+                    </span>
+                  ) : typeof value === "number" ? (
+                    <span className="font-mono text-blue-700">{value.toLocaleString("es-MX")}</span>
+                  ) : (
+                    <span className="break-all">{String(value)}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className="text-gray-500">No hay datos disponibles para esta cobertura.</div>
+      )}
     </div>
   )
 
@@ -503,7 +504,6 @@ export default function ResultadosPage() {
     return (
       editableVehicleData.marca.trim() !== "" &&
       editableVehicleData.año.trim() !== "" &&
-      /^\d{4}$/.test(editableVehicleData.año) &&
       editableVehicleData.modelo.trim() !== "" &&
       editableVehicleData.descripcion.trim() !== "" &&
       editableUserData.genero.trim() !== "" &&
@@ -861,22 +861,11 @@ export default function ResultadosPage() {
           </Card>
         )}
 
-        {/* Plan Selection and Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1">
-            <Select defaultValue="anual">
-              <SelectTrigger className="w-full border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="anual">Plan anual</SelectItem>
-                <SelectItem value="semestral">Plan semestral</SelectItem>
-                <SelectItem value="mensual">Plan mensual</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="lg:col-span-3 flex">
+        {/* Plan Selection and Coverage Tabs */}
+        <div className="mb-4 flex items-center gap-6">
+          <span className="inline-block bg-[#8BC34A] text-white px-4 py-2 rounded font-semibold">Plan anual</span>
+          <div className="lg:col-span-3 flex w-full max-w-xl">
+            {/* Tab Amplia */}
             <div
               className={`flex-1 text-center p-4 rounded-l-lg cursor-pointer transition-all ${
                 selectedPlan === "amplia"
@@ -886,8 +875,9 @@ export default function ResultadosPage() {
               onClick={() => setSelectedPlan("amplia")}
             >
               <div className="text-base font-medium">Amplia</div>
-              <div className="text-xl font-bold mt-1">$9,123</div>
+              <div className="text-xl font-bold mt-1">{insurers[0]?.prices?.amplia ?? "-"}</div>
             </div>
+            {/* Tab Limitada */}
             <div
               className={`flex-1 text-center p-4 cursor-pointer transition-all ${
                 selectedPlan === "limitada"
@@ -897,8 +887,9 @@ export default function ResultadosPage() {
               onClick={() => setSelectedPlan("limitada")}
             >
               <div className="text-base font-medium">Limitada</div>
-              <div className="text-xl font-bold mt-1">$5,123</div>
+              <div className="text-xl font-bold mt-1">{insurers[0]?.prices?.limitada ?? "-"}</div>
             </div>
+            {/* Tab RC */}
             <div
               className={`flex-1 text-center p-4 rounded-r-lg cursor-pointer transition-all ${
                 selectedPlan === "rc"
@@ -908,16 +899,16 @@ export default function ResultadosPage() {
               onClick={() => setSelectedPlan("rc")}
             >
               <div className="text-base font-medium">Responsabilidad civil</div>
-              <div className="text-xl font-bold mt-1">$4,123</div>
+              <div className="text-xl font-bold mt-1">{insurers[0]?.prices?.rc ?? "-"}</div>
             </div>
           </div>
         </div>
 
-        {/* Insurance Comparison Table */}
+        {/* Insurance Comparison Table (Visual Cards Grid) */}
         <div className="space-y-4">
           {/* Header with Sort Filter */}
           <div className="flex items-center justify-between">
-            <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-600 px-4 flex-1">
+            <div className="hidden md:grid grid-cols-5 gap-4 text-sm font-medium text-gray-600 px-4 flex-1">
               <div>Aseguradora</div>
               <div>Prima anual</div>
               <div>Deducible robo total</div>
@@ -938,14 +929,37 @@ export default function ResultadosPage() {
             </div>
           </div>
 
-          {/* Insurance Cards */}
-          {getSortedInsurers().map((insurer) => (
-            <div key={insurer.id}>
-              <Card className={`border ${insurer.isHighlighted ? "border-[#8BC34A] bg-[#F8FFF8]" : "border-gray-200"}`}>
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-5 gap-4 items-center">
-                    <div className="font-medium text-gray-900">
-                      <div className="h-10 relative">
+          {/* Visual Horizontal Cards List con estructura fiel al diseño original */}
+          <div className="flex flex-col gap-0">
+            {getSortedInsurers().map((insurer) => {
+              // Determinar la cobertura seleccionada global
+              const coberturaKeys = Object.keys(insurer.coveragesRaw ?? {})
+              const selectedCoverageKey = selectedPlan
+              const selectedCoverage =
+                insurer.coveragesRaw && coberturaKeys.includes(selectedCoverageKey)
+                  ? insurer.coveragesRaw[selectedCoverageKey as keyof typeof insurer.coveragesRaw]
+                  : {}
+
+              // Obtener datos principales dinámicamente según la cobertura seleccionada
+              let dynamicPrice = "-"
+              let dynamicDeductible = "-"
+              let dynamicMedicalExpenses = "-"
+              if (selectedCoverageKey && selectedCoverage) {
+                dynamicPrice = selectedCoverage.dPrecioTotal
+                  ? `$${selectedCoverage.dPrecioTotal}`
+                  : (insurer.prices?.[selectedCoverageKey as keyof typeof insurer.prices] ?? "-")
+                dynamicDeductible = selectedCoverage.deductible || selectedCoverage.iDanoVehiculo !== undefined ? `${selectedCoverage.iDanoVehiculo ?? selectedCoverage.deductible}%` : (insurer.deductible ?? "-")
+                dynamicMedicalExpenses = selectedCoverage.dGastosMedicos || insurer.medicalExpenses || "-"
+              }
+
+              return (
+                <div key={insurer.id} className="border-b border-gray-200 last:border-b-0">
+                  <div
+                    className={`flex flex-row items-center w-full px-4 py-4 transition-all duration-200 relative ${insurer.isHighlighted ? "bg-[#F8FFF8] border-l-4 border-[#8BC34A]" : "bg-white"} ${insurer.isError ? "opacity-60" : "hover:bg-gray-50"}`}
+                  >
+                    {/* Logo y nombre */}
+                    <div className="flex items-center min-w-[120px] w-1/5">
+                      <div className="h-10 w-20 relative mr-3">
                         <Image
                           src={insurer.logo || "/placeholder.svg"}
                           alt={`Logo de ${insurer.name}`}
@@ -953,33 +967,88 @@ export default function ResultadosPage() {
                           style={{ objectFit: "contain", objectPosition: "left" }}
                         />
                       </div>
+                      <span className="font-bold text-base text-gray-900 text-left">{insurer.name}</span>
                     </div>
-                    <div className="font-bold text-lg">{insurer.prices[selectedPlan]}</div>
-                    <div className="text-gray-600">{insurer.deductible}</div>
-                    <div className="text-gray-600">{insurer.medicalExpenses}</div>
-                    <div>
+                    {/* Prima anual */}
+                    <div className="flex-1 text-center">
+                      {insurer.isLoading ? (
+                        <Skeleton className="mx-auto h-6 w-20 rounded bg-gray-200" />
+                      ) : (
+                        <span className="font-bold text-lg text-[#8BC34A]">{dynamicPrice}</span>
+                      )}
+                    </div>
+                    {/* Deducible */}
+                    <div className="flex-1 text-center">
+                      {insurer.isLoading ? (
+                        <Skeleton className="mx-auto h-5 w-16 rounded bg-gray-200" />
+                      ) : (
+                        <span className="font-semibold">{dynamicDeductible}</span>
+                      )}
+                    </div>
+                    {/* Gastos médicos */}
+                    <div className="flex-1 text-center">
+                      {insurer.isLoading ? (
+                        <Skeleton className="mx-auto h-5 w-16 rounded bg-gray-200" />
+                      ) : (
+                        <span className="font-semibold">{dynamicMedicalExpenses}</span>
+                      )}
+                    </div>
+                    {/* Botón de coberturas */}
+                    <div className="flex-1 flex justify-center">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-[#8BC34A] border-[#8BC34A]"
+                        className="text-[#8BC34A] border-[#8BC34A] flex items-center gap-1"
                         onClick={() => toggleExpanded(insurer.id)}
+                        disabled={insurer.isError || insurer.isLoading}
                       >
                         Coberturas
                         {expandedInsurer === insurer.id ? (
-                          <ChevronUp className="w-4 w-4 ml-1" />
+                          <ChevronUp className="w-4 h-4 ml-1" />
                         ) : (
-                          <ChevronDown className="w-4 w-4 ml-1" />
+                          <ChevronDown className="w-4 h-4 ml-1" />
                         )}
                       </Button>
                     </div>
+                    {/* Error visual si aplica */}
+                    {insurer.isError && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-10 rounded-lg">
+                        <span className="text-red-600 font-semibold text-center">Datos no disponibles para esta aseguradora</span>
+                      </div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Expanded Coverage Details */}
-              {expandedInsurer === insurer.id && renderCoverageDetails()}
-            </div>
-          ))}
+                  {/* Expanded Coverage Details (grid visual de cards pequeñas, solo datos JSON) */}
+                  {!insurer.isError && expandedInsurer === insurer.id && !insurer.isLoading && (
+                    <div className="w-full bg-gray-50 px-8 py-6 animate-fade-in border-t border-b border-[#8BC34A]">
+                      <h4 className="font-semibold text-gray-900 mb-4">Coberturas incluidas</h4>
+                      {selectedCoverage && Object.keys(selectedCoverage).length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          {Object.entries(selectedCoverage).map(([key, value]) => (
+                            value !== null && value !== undefined && value !== "" && (
+                              <div key={key} className="flex flex-col bg-white rounded-lg shadow-sm p-4 border border-gray-200 min-h-[80px]">
+                                <span className="text-xs text-gray-500 mb-1 font-medium">{humanizeKey(key)}</span>
+                                {typeof value === "boolean" ? (
+                                  <span className={`inline-block px-2 py-1 rounded text-xs font-bold mt-1 ${value ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                    {value ? "Sí" : "No"}
+                                  </span>
+                                ) : typeof value === "number" ? (
+                                  <span className="font-bold text-lg text-blue-700 mt-1">{value.toLocaleString("es-MX")}</span>
+                                ) : (
+                                  <span className="font-semibold text-gray-900 mt-1 break-words">{String(value)}</span>
+                                )}
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-gray-500">No hay datos disponibles para esta cobertura.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* Bottom CTA */}
