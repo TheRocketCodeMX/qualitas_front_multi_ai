@@ -26,7 +26,6 @@ export default function ResultadosPage() {
   const router = useRouter()
   const [selectedPlan, setSelectedPlan] = useState<"amplia" | "limitada" | "rc">("amplia")
   const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">("default")
-  const [isEditMode, setIsEditMode] = useState(false)
 
   const [editableVehicleData, setEditableVehicleData] = useState({
     marca: "Honda",
@@ -353,14 +352,7 @@ const renderCoverageDetails = (coverageObj: any) => {
     <div className="w-full px-4 mt-6">
       <h4 className="text-lg font-semibold text-gray-900 mb-4">Detalles de la cobertura seleccionada</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-        <div>
-          <p className="text-gray-500">Cotización Clave</p>
-          <p className="text-gray-900 font-medium">{coverageObj.iCotizacionClave}</p>
-        </div>
-        <div>
-          <p className="text-gray-500">Nombre del Seguro</p>
-          <p className="text-gray-900 font-medium">{coverageObj.vNombreSeguro}</p>
-        </div>
+        {/* Eliminados: Cotización Clave y Nombre del Seguro */}
         <div>
           <p className="text-gray-500">Cobertura</p>
           <p className="text-gray-900">{coverageObj.vNombreCobertura}</p>
@@ -634,324 +626,22 @@ const renderCoverageDetails = (coverageObj: any) => {
           </div>
         </div>
 
-        {/* Vehicle Type Tabs */}
-        <div className="w-full">
-          <div className="grid w-full grid-cols-1 bg-gray-100 h-12">
-            {vehicleTypes.map((type) => (
-              <div
-                key={type.id}
-                className={`flex items-center justify-center space-x-2 h-12 ${
-                  type.id === "auto"
-                    ? "bg-white text-[#8BC34A] border-b-2 border-[#8BC34A]"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                <type.icon className="w-4 h-4" />
-                <span className="text-sm">{type.label}</span>
+        {/* Vehicle and User Info solo visualización */}
+        <Card className="bg-gray-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <span className="font-medium text-gray-900">
+                  {editableVehicleData.marca || "Honda"} - {editableVehicleData.año || "2017"} - {editableVehicleData.modelo || "CRV"} - {editableVehicleData.descripcion || "Elegance 2WD"}
+                </span>
+                <span className="text-gray-600">•</span>
+                <span className="text-gray-600">
+                  {editableUserData.genero || "Femenino"} - {editableUserData.fechaNacimiento || "2001-02-01"} - {editableUserData.codigoPostal || "07310"}
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Vehicle and User Info */}
-        {isEditMode ? (
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Editar información</h3>
-
-                {/* Vehicle Data */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-700">Datos del vehículo</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {/* Campo Año */}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-año" className="text-sm font-medium text-gray-700">
-                        Año <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="edit-año"
-                        value={editableVehicleData.año}
-                        onChange={(e) => {
-                          const value = e.target.value
-                          // Solo permitir números y máximo 4 dígitos
-                          if (/^\d{0,4}$/.test(value)) {
-                            setEditableVehicleData({ ...editableVehicleData, año: value })
-
-                            // Clear dependent fields if año is empty
-                            if (!value) {
-                              setEditableVehicleData((prev) => ({
-                                ...prev,
-                                año: value,
-                                marca: "",
-                                modelo: "",
-                                descripcion: "",
-                              }))
-                            }
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const value = e.target.value
-                          if (value && /^\d{4}$/.test(value)) {
-                            // Fetch brands when year is entered
-                            fetchMarcas(value)
-                          }
-                        }}
-                        className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                        maxLength={4}
-                        required
-                      />
-                    </div>
-
-                    {/* Campo Marca */}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-marca" className="text-sm font-medium text-gray-700">
-                        Marca <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={editableVehicleData.marca}
-                        onValueChange={(value) => {
-                          setEditableVehicleData({
-                            ...editableVehicleData,
-                            marca: value,
-                            modelo: "", // Clear modelo when marca changes
-                            descripcion: "", // Clear descripcion when marca changes
-                          })
-
-                          // Fetch modelos when marca changes
-                          if (value && editableVehicleData.año) {
-                            fetchModelos(editableVehicleData.año, value)
-                          }
-                        }}
-                        disabled={!editableVehicleData.año || isLoadingMarcas}
-                      >
-                        <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
-                          <SelectValue
-                            placeholder={
-                              isLoadingMarcas
-                                ? "Cargando marcas..."
-                                : !editableVehicleData.año
-                                  ? "Primero ingresa un año válido"
-                                  : "Selecciona una marca"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {marcas.map((marca, index) => (
-                            <SelectItem key={index} value={marca}>
-                              {marca}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {marcaError && <p className="text-xs text-red-500">{marcaError}</p>}
-                    </div>
-
-                    {/* Campo Modelo */}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-modelo" className="text-sm font-medium text-gray-700">
-                        Modelo <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={editableVehicleData.modelo}
-                        onValueChange={(value) => {
-                          setEditableVehicleData({
-                            ...editableVehicleData,
-                            modelo: value,
-                            descripcion: "", // Clear descripcion when modelo changes
-                          })
-
-                          // Fetch descripciones when modelo changes
-                          if (value && editableVehicleData.año && editableVehicleData.marca) {
-                            fetchDescripciones(editableVehicleData.año, editableVehicleData.marca, value)
-                          }
-                        }}
-                        disabled={!editableVehicleData.marca || isLoadingModelos}
-                      >
-                        <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
-                          <SelectValue
-                            placeholder={
-                              isLoadingModelos
-                                ? "Cargando modelos..."
-                                : !editableVehicleData.marca
-                                  ? "Primero selecciona una marca"
-                                  : "Selecciona un modelo"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {modelos.map((modelo, index) => (
-                            <SelectItem key={index} value={modelo}>
-                              {modelo}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {modeloError && <p className="text-xs text-red-500">{modeloError}</p>}
-                    </div>
-
-                    {/* Campo Descripción */}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-descripcion" className="text-sm font-medium text-gray-700">
-                        Descripción <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={editableVehicleData.descripcion}
-                        onValueChange={(value) =>
-                          setEditableVehicleData({ ...editableVehicleData, descripcion: value })
-                        }
-                        disabled={!editableVehicleData.modelo || isLoadingDescripciones}
-                      >
-                        <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
-                          <SelectValue
-                            placeholder={
-                              isLoadingDescripciones
-                                ? "Cargando descripciones..."
-                                : !editableVehicleData.modelo
-                                  ? "Primero selecciona un modelo"
-                                  : "Selecciona una descripción"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {descripciones.map((descripcion, index) => (
-                            <SelectItem key={index} value={descripcion}>
-                              {descripcion}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {descripcionError && <p className="text-xs text-red-500">{descripcionError}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* User Data */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-700">Datos del usuario</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-genero" className="text-sm font-medium text-gray-700">
-                        Género <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={editableUserData.genero}
-                        onValueChange={(value) => setEditableUserData({ ...editableUserData, genero: value })}
-                        required
-                      >
-                        <SelectTrigger className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Masculino">Masculino</SelectItem>
-                          <SelectItem value="Femenino">Femenino</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-fecha" className="text-sm font-medium text-gray-700">
-                        Fecha de nacimiento <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="edit-fecha"
-                        type="date"
-                        value={editableUserData.fechaNacimiento}
-                        onChange={(e) => setEditableUserData({ ...editableUserData, fechaNacimiento: e.target.value })}
-                        className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                        max={new Date().toISOString().split("T")[0]}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-cp" className="text-sm font-medium text-gray-700">
-                        Código postal <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="edit-cp"
-                        value={editableUserData.codigoPostal}
-                        onChange={(e) => {
-                          const value = e.target.value
-                          if (/^\d*$/.test(value) && value.length <= 5) {
-                            setEditableUserData({ ...editableUserData, codigoPostal: value })
-                          }
-                        }}
-                        className="border-gray-300 focus:border-[#8BC34A] focus:ring-[#8BC34A]"
-                        maxLength={5}
-                        pattern="[0-9]{5}"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end space-x-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsEditMode(false)}
-                    className="border-gray-300 text-gray-700"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      // Validate required fields
-                      if (
-                        !editableVehicleData.marca ||
-                        !editableVehicleData.año ||
-                        !editableVehicleData.modelo ||
-                        !editableVehicleData.descripcion ||
-                        !editableUserData.genero ||
-                        !editableUserData.fechaNacimiento ||
-                        !editableUserData.codigoPostal
-                      ) {
-                        alert("Por favor, completa todos los campos obligatorios.")
-                        return
-                      }
-
-                      if (editableUserData.codigoPostal.length !== 5) {
-                        alert("El código postal debe tener exactamente 5 dígitos.")
-                        return
-                      }
-
-                      setIsEditMode(false)
-                    }}
-                    className="bg-[#8BC34A] hover:bg-[#7CB342] text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    disabled={!isFormValid()}
-                  >
-                    Guardar cambios
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-gray-50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <span className="font-medium text-gray-900">
-                    {editableVehicleData.marca || "Honda"} - {editableVehicleData.año || "2017"} -{" "}
-                    {editableVehicleData.modelo || "CRV"} - {editableVehicleData.descripcion || "Elegance 2WD"}
-                  </span>
-                  <span className="text-gray-600">•</span>
-                  <span className="text-gray-600">
-                    {editableUserData.genero || "Femenino"} - {editableUserData.fechaNacimiento || "2001-02-01"} -{" "}
-                    {editableUserData.codigoPostal || "07310"}
-                  </span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-[#8BC34A] border-[#8BC34A]"
-                  onClick={() => setIsEditMode(true)}
-                >
-                  Editar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Plan Selection and Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-4">
