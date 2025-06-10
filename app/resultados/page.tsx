@@ -191,47 +191,59 @@ export default function ResultadosPage() {
   const handleDownloadExcel = () => {
     try {
       // Datos del vehículo y usuario
-      const vehicleInfo = "Honda - 2017 - CRV - Elegance 2WD"
-      const userInfo = "María Hernández - Femenino - 01/02/2001 - 5512345678 - maria@mail.com - 07310"
+      const vehicleInfo = `${editableVehicleData.marca || "-"} - ${editableVehicleData.año || "-"} - ${editableVehicleData.modelo || "-"} - ${editableVehicleData.descripcion || "-"}`
+      const userInfo = `${editableUserData.genero || "-"} - ${editableUserData.fechaNacimiento || "-"} - ${editableUserData.codigoPostal || "-"}`
 
-      // Preparar datos para Excel
-      const excelData = []
-
-      // Encabezados
+      // Encabezados amigables (sin Cotización Clave ni Nombre del Seguro)
       const headers = [
         "Vehículo",
         "Usuario",
         "Aseguradora",
-        "Prima Anual",
-        "Deducible Robo Total",
-        "Gastos Médicos",
+        "Plan",
+        "Cobertura",
+        "Precio Total",
+        "Plazo",
+        "Daños a Terceros",
         "Robo Total",
-        "Responsabilidad Civil - Daños a Bienes",
-        "Responsabilidad Civil - Daños Corporales",
-        "Fianza Legal",
-        "Daños Materiales",
-        "Servicios de Asistencia",
+        "Robo Parcial",
+        "Gastos Médicos",
+        "Fallecimiento",
+        "Defensa Legal",
+        "Asistencia Vial",
+        "Daños al Vehículo"
       ]
 
-      excelData.push(headers)
+      const excelData = [headers]
+      const planLabels: Array<{ key: "amplia" | "limitada" | "rc"; label: string }> = [
+        { key: "amplia", label: "Amplia" },
+        { key: "limitada", label: "Limitada" },
+        { key: "rc", label: "RC" }
+      ]
 
-      // Datos de cada aseguradora
       insurers.forEach((insurer) => {
-        const row = [
-          vehicleInfo,
-          userInfo,
-          insurer.name,
-          insurer.prices?.[selectedPlan] ?? "-",
-          insurer.deductible,
-          insurer.medicalExpenses,
-          "Valor comercial al momento del siniestro",
-          "Hasta $1,500,000 MXN",
-          "Hasta $3,000,000 MXN",
-          "Incluida hasta $50,000 MXN",
-          "Valor comercial - Deducible 5%",
-          "Grúa, corriente, gasolina, llanta, asistencia legal",
-        ]
-        excelData.push(row)
+        if (insurer.isError || insurer.isLoading || !insurer.coveragesRaw) return
+        const coveragesRaw = insurer.coveragesRaw as { amplia?: any; limitada?: any; rc?: any }
+        planLabels.forEach(({ key, label }) => {
+          const cov = coveragesRaw[key]
+          if (!cov) return
+          excelData.push([
+            vehicleInfo,
+            userInfo,
+            insurer.name,
+            label,
+            cov.vNombreCobertura ?? "-",
+            cov.dPrecioTotal ?? "-",
+            cov.vPlazoCobertura ?? "-",
+            cov.dDanosTerceros ?? "-",
+            cov.iRoboTotal ?? "-",
+            cov.iRoboParcial ?? "-",
+            cov.dGastosMedicos ?? "-",
+            cov.dFallecimiento ?? "-",
+            cov.bDefensaLegal === "true" || cov.bDefensaLegal === true ? "Sí" : "No",
+            cov.bAsistencialVialCarretera === "true" || cov.bAsistencialVialCarretera === true ? "Sí" : "No",
+            cov.iDanoVehiculo ?? "-"
+          ])
+        })
       })
 
       // Crear workbook y worksheet
@@ -239,24 +251,25 @@ export default function ResultadosPage() {
       const ws = XLSX.utils.aoa_to_sheet(excelData)
 
       // Ajustar ancho de columnas
-      const colWidths = [
+      ws["!cols"] = [
         { wch: 35 }, // Vehículo
-        { wch: 50 }, // Usuario
+        { wch: 35 }, // Usuario
         { wch: 15 }, // Aseguradora
-        { wch: 12 }, // Prima Anual
-        { wch: 20 }, // Deducible
-        { wch: 20 }, // Gastos Médicos
-        { wch: 25 }, // Robo Total
-        { wch: 25 }, // RC Bienes
-        { wch: 25 }, // RC Corporales
-        { wch: 20 }, // Fianza
-        { wch: 25 }, // Daños Materiales
-        { wch: 35 }, // Asistencia
+        { wch: 10 }, // Plan
+        { wch: 20 }, // Cobertura
+        { wch: 15 }, // Precio Total
+        { wch: 10 }, // Plazo
+        { wch: 18 }, // Daños a Terceros
+        { wch: 12 }, // Robo Total
+        { wch: 15 }, // Robo Parcial
+        { wch: 15 }, // Gastos Médicos
+        { wch: 15 }, // Fallecimiento
+        { wch: 15 }, // Defensa Legal
+        { wch: 18 }, // Asistencia Vial
+        { wch: 15 }, // Daños al Vehículo
       ]
-      ws["!cols"] = colWidths
 
-      // Agregar worksheet al workbook
-      XLSX.utils.book_append_sheet(wb, ws, "Cotización")
+      XLSX.utils.book_append_sheet(wb, ws, "Cotización Detallada")
 
       // Generar archivo y descargar
       const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" })
@@ -267,7 +280,7 @@ export default function ResultadosPage() {
 
       const link = document.createElement("a")
       link.href = url
-      link.download = `cotizacion_${new Date().toISOString().split("T")[0]}.xlsx`
+      link.download = `cotizacion_detallada_${new Date().toISOString().split("T")[0]}.xlsx`
       document.body.appendChild(link)
       link.click()
 
