@@ -178,7 +178,7 @@ export default function CotizadorPage() {
       selectedInsurers.map(async (insurer) => {
         const endpoint = insurerEndpoints[insurer as keyof typeof insurerEndpoints]
         if (!endpoint) {
-          updateResult(insurer, { insurer, error: "No endpoint definido", loading: false })
+          updateResult(insurer, { insurer, data: { success: false, message: "No endpoint definido" }, loading: false })
           return
         }
         try {
@@ -187,7 +187,20 @@ export default function CotizadorPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(requestBody),
           })
-          if (!res.ok) throw new Error(`Error en ${insurer}`)
+          if (!res.ok) {
+            let errorMessage = `Error en ${insurer}: ${res.status} ${res.statusText}`;
+            try {
+              const errorData = await res.json();
+              if (errorData && errorData.message) {
+                errorMessage = errorData.message;
+              }
+            } catch {}
+            if (!errorMessage || errorMessage === "Failed to fetch") {
+              errorMessage = "Error consultando datos";
+            }
+            updateResult(insurer, { insurer, data: { success: false, message: errorMessage }, loading: false })
+            return
+          }
           const data = await res.json()
           // Mapeo especial para Mapfre si es necesario
           if (insurer === "Mapfre" && data.success && Array.isArray(data.resultado)) {
@@ -202,7 +215,12 @@ export default function CotizadorPage() {
           }
           updateResult(insurer, { insurer, data, loading: false })
         } catch (err) {
-          updateResult(insurer, { insurer, error: err instanceof Error ? err.message : "Error desconocido", loading: false })
+          // Guardar error como data: { success: false, message: ... }
+          let errorMessage = err instanceof Error ? err.message : "Error desconocido";
+          if (!errorMessage || errorMessage === "Failed to fetch") {
+            errorMessage = "Error consultando datos";
+          }
+          updateResult(insurer, { insurer, data: { success: false, message: errorMessage }, loading: false })
         }
       })
     )

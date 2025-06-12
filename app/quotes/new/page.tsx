@@ -127,12 +127,27 @@ export default function NewQuotePage() {
               body: JSON.stringify(requestBody),
             })
             if (!res.ok) {
-              throw new Error(`Error en ${insurer.name}`)
+              let errorMessage = `Error en ${insurer.name}: ${res.status} ${res.statusText}`;
+              try {
+                const errorData = await res.json();
+                if (errorData && errorData.message) {
+                  errorMessage = errorData.message;
+                }
+              } catch {}
+              if (!errorMessage || errorMessage === "Failed to fetch") {
+                errorMessage = "Error consultando datos";
+              }
+              return { insurer: insurer.name, data: { success: false, message: errorMessage } }
             }
             const data = await res.json()
             return { insurer: insurer.name, data }
           } catch (err) {
-            return { insurer: insurer.name, error: err instanceof Error ? err.message : "Error desconocido" }
+            // Guardar error como data: { success: false, message: ... }
+            let errorMessage = err instanceof Error ? err.message : "Error desconocido";
+            if (!errorMessage || errorMessage === "Failed to fetch") {
+              errorMessage = "Error consultando datos";
+            }
+            return { insurer: insurer.name, data: { success: false, message: errorMessage } }
           }
         })
       )
