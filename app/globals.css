@@ -92,3 +92,26 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Skeleton shimmer effect mejorado */
+.skeleton-shimmer {
+  box-shadow: 0 8px 32px 0 rgba(60,60,60,0.18);
+  animation: skeleton-glow 1.2s infinite alternate, skeleton-bounce 1.6s infinite linear;
+}
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -200px; height: 100%; width: 200px;
+  background: linear-gradient(90deg, transparent, rgba(139,195,74,0.15), rgba(255,255,255,0.4), transparent);
+  animation: shimmer 1.2s infinite;
+  border-radius: inherit;
+}
+@keyframes shimmer { 100% { left: 100%; } }
+@keyframes skeleton-glow {
+  0% { box-shadow: 0 8px 32px 0 rgba(60,60,60,0.18); }
+  100% { box-shadow: 0 8px 32px 0 rgba(120,120,120,0.22); }
+}
+@keyframes skeleton-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}

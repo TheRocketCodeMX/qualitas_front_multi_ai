@@ -853,7 +853,7 @@ export default function CotizadorPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Cotizador manual</h1>
-            <p className="text-gray-600 mt-1">Lorem ipsum dolor sit amet consectetur.</p>
+            {/* <p className="text-gray-600 mt-1">Lorem ipsum dolor sit amet consectetur.</p> */}
           </div>
         </div>
 

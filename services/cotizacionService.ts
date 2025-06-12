@@ -25,6 +25,7 @@ export interface Insurer {
   isLoading: boolean
   isHighlighted: boolean
   errorMessage?: string
+  errorImageUrl?: string
 }
 
 export interface PriceInfo {
@@ -72,6 +73,7 @@ export class CotizacionService {
           name: res.insurer,
           logo: `/images/${res.insurer.toLowerCase()}-logo.png`,
           errorMessage,
+          errorImageUrl: res.data.url_image || undefined,
           isError: true,
           isLoading: false,
           isHighlighted: false,

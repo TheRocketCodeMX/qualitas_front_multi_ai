@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import Image from "next/image"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CoverageDetails } from "./CoverageDetails"
+import { ErrorImageModal } from "./ErrorImageModal"
 
 interface InsuranceCardProps {
   insurer: {
@@ -18,6 +20,7 @@ interface InsuranceCardProps {
     isLoading: boolean
     isHighlighted: boolean
     errorMessage?: string
+    errorImageUrl?: string
   }
   selectedPlan: "amplia" | "limitada" | "rc"
   isExpanded: boolean
@@ -25,69 +28,112 @@ interface InsuranceCardProps {
 }
 
 export function InsuranceCard({ insurer, selectedPlan, isExpanded, onToggleExpand }: InsuranceCardProps) {
+  const [showErrorImage, setShowErrorImage] = useState(false);
+
   return (
     <div>
-      <Card className={`border ${insurer.isHighlighted ? "border-[#8BC34A] bg-[#F8FFF8]" : "border-gray-200"} ${insurer.isError ? "opacity-60" : ""}`}>
+      <Card className={`border ${insurer.isHighlighted ? "border-[#8BC34A] bg-[#F8FFF8]" : "border-gray-200"}`}>
         <CardContent className="p-4">
-          <div className="grid grid-cols-5 gap-4 items-center">
-            <div className="font-medium text-gray-900 flex items-center gap-2">
-              <div className="h-10 w-20 relative">
-                <Image
-                  src={insurer.logo || "/placeholder.svg"}
-                  alt={`Logo de ${insurer.name}`}
-                  fill
-                  style={{ objectFit: "contain", objectPosition: "left" }}
-                />
+          {insurer.isLoading ? (
+            <div className="grid grid-cols-5 gap-4 items-center animate-none">
+              {/* Logo real */}
+              <div className="flex items-center gap-2">
+                <div className="h-10 w-20 relative">
+                  <Image
+                    src={insurer.logo || "/placeholder.svg"}
+                    alt={`Logo de ${insurer.name}`}
+                    fill
+                    style={{ objectFit: "contain", objectPosition: "left" }}
+                  />
+                </div>
+              </div>
+              {/* Precio skeleton */}
+              <div className="text-center">
+                <Skeleton shimmer pulse className="mx-auto h-6 w-20 rounded bg-gray-200 mb-2" />
+              </div>
+              {/* Deducible skeleton */}
+              <div className="text-center">
+                <Skeleton shimmer pulse className="mx-auto h-5 w-16 rounded bg-gray-200 mb-2" />
+              </div>
+              {/* Gastos médicos skeleton */}
+              <div className="text-center">
+                <Skeleton shimmer pulse className="mx-auto h-5 w-16 rounded bg-gray-200 mb-2" />
+              </div>
+              {/* Botón skeleton */}
+              <div className="flex justify-end">
+                <Skeleton shimmer pulse className="h-10 w-24 rounded-full bg-gray-200" />
               </div>
             </div>
-            {insurer.isError ? (
-              <div className="col-span-3 text-center">
-                <span className="text-red-600 font-semibold text-xs">
-                  {insurer.errorMessage || "Datos no disponibles para esta aseguradora"}
-                </span>
+          ) : (
+            <div className="grid grid-cols-5 gap-4 items-center">
+              <div className={`font-medium text-gray-900 flex items-center gap-2 ${insurer.isError ? "opacity-60" : ""}`}>
+                <div className="h-10 w-20 relative">
+                  <Image
+                    src={insurer.logo || "/placeholder.svg"}
+                    alt={`Logo de ${insurer.name}`}
+                    fill
+                    style={{ objectFit: "contain", objectPosition: "left" }}
+                  />
+                </div>
               </div>
-            ) : (
-              <>
-                <div className="font-bold text-lg text-[#8BC34A] text-center">
-                  {insurer.isLoading ? (
-                    <Skeleton className="mx-auto h-6 w-20 rounded bg-gray-200" />
-                  ) : (
-                    insurer.prices?.[selectedPlan] ?? "-"
-                  )}
-                </div>
-                <div className="text-gray-600 text-center">
-                  {insurer.isLoading ? (
-                    <Skeleton className="mx-auto h-5 w-16 rounded bg-gray-200" />
-                  ) : (
-                    insurer.deductible ?? "-"
-                  )}
-                </div>
-                <div className="text-gray-600 text-center">
-                  {insurer.isLoading ? (
-                    <Skeleton className="mx-auto h-5 w-16 rounded bg-gray-200" />
-                  ) : (
-                    insurer.medicalExpenses ?? "-"
-                  )}
-                </div>
-              </>
-            )}
-            <div className="flex justify-center">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-[#8BC34A] border-[#8BC34A] flex items-center gap-1"
-                onClick={onToggleExpand}
-                disabled={insurer.isError || insurer.isLoading}
-              >
-                Coberturas
-                {isExpanded ? (
-                  <ChevronUp className="w-4 h-4 ml-1" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 ml-1" />
-                )}
-              </Button>
+              {insurer.isError ? (
+                <>
+                  <div className="col-span-3 text-center">
+                    <span className="text-red-600 font-semibold text-xs opacity-60">
+                      {insurer.errorMessage || "Datos no disponibles para esta aseguradora"}
+                    </span>
+                  </div>
+                  <div className="flex justify-end">
+                    {insurer.errorImageUrl ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-400 flex items-center gap-1"
+                          onClick={() => setShowErrorImage(true)}
+                        >
+                          Ver error
+                        </Button>
+                        <ErrorImageModal
+                          open={showErrorImage}
+                          onClose={() => setShowErrorImage(false)}
+                          imageUrl={insurer.errorImageUrl}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-bold text-lg text-[#8BC34A] text-center">
+                    {insurer.prices?.[selectedPlan] ?? "-"}
+                  </div>
+                  <div className="text-gray-600 text-center">
+                    {insurer.deductible ?? "-"}
+                  </div>
+                  <div className="text-gray-600 text-center">
+                    {insurer.medicalExpenses ?? "-"}
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-[#8BC34A] border-[#8BC34A] flex items-center gap-1"
+                      onClick={onToggleExpand}
+                      disabled={insurer.isError || insurer.isLoading}
+                    >
+                      Coberturas
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4 ml-1" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 ml-1" />
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

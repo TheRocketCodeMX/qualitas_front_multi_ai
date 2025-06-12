@@ -11,7 +11,7 @@ export function ResultadosHeader({ onDownloadExcel, onNuevaCotizacion }: Resulta
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Cotizador manual</h1>
-        <p className="text-gray-600 mt-1">Lorem ipsum dolor sit amet consectetur.</p>
+        {/* <p className="text-gray-600 mt-1">Lorem ipsum dolor sit amet consectetur.</p> */}
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <Button
