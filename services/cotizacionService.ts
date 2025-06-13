@@ -80,46 +80,24 @@ export class CotizacionService {
         }
       }
 
-      let resultado = res.data?.resultado?.[0] || {}
-      let isHDI = res.insurer.toLowerCase() === "hdi"
-      let prices, deductible, medicalExpenses, coveragesRaw
-
-      if (isHDI) {
-        prices = {
-          amplia: resultado.PREMIUM?.dPrecioTotal ? `$${resultado.PREMIUM.dPrecioTotal}` : "-",
-          limitada: resultado.AMPLIA?.dPrecioTotal ? `$${resultado.AMPLIA.dPrecioTotal}` : "-",
-          rc: resultado.LIMITADA?.dPrecioTotal ? `$${resultado.LIMITADA.dPrecioTotal}` : "-",
-        }
-        deductible = resultado.PREMIUM?.iDanoVehiculo !== undefined ? `${resultado.PREMIUM.iDanoVehiculo}%` : "-"
-        medicalExpenses = resultado.PREMIUM?.dGastosMedicos || "-"
-        coveragesRaw = {
-          amplia: resultado.PREMIUM || {},
-          limitada: resultado.AMPLIA || {},
-          rc: resultado.LIMITADA || {},
-        }
-      } else {
-        prices = {
-          amplia: resultado.AMPLIA?.dPrecioTotal ? `$${resultado.AMPLIA.dPrecioTotal}` : "-",
-          limitada: resultado.LIMITADA?.dPrecioTotal ? `$${resultado.LIMITADA.dPrecioTotal}` : "-",
-          rc: resultado.PREMIUM?.dPrecioTotal ? `$${resultado.PREMIUM.dPrecioTotal}` : "-",
-        }
-        deductible = resultado.AMPLIA?.deductible || "-"
-        medicalExpenses = resultado.AMPLIA?.dGastosMedicos || "-"
-        coveragesRaw = {
-          amplia: resultado.AMPLIA || {},
-          limitada: resultado.LIMITADA || {},
-          rc: resultado.PREMIUM || {},
-        }
-      }
-
+      const resultado = res.data?.resultado?.[0] || {}
+      
       return {
         id: res.insurer.toLowerCase(),
         name: res.insurer,
         logo: `/images/${res.insurer.toLowerCase()}-logo.png`,
-        prices,
-        deductible,
-        medicalExpenses,
-        coveragesRaw,
+        prices: {
+          amplia: resultado.AMPLIA?.dPrecioTotal ? `$${resultado.AMPLIA.dPrecioTotal}` : "-",
+          limitada: resultado.LIMITADA?.dPrecioTotal ? `$${resultado.LIMITADA.dPrecioTotal}` : "-",
+          rc: resultado.RC?.dPrecioTotal ? `$${resultado.RC.dPrecioTotal}` : "-",
+        },
+        deductible: resultado.AMPLIA?.iDanoVehiculo !== undefined ? `${resultado.AMPLIA.iDanoVehiculo}%` : "-",
+        medicalExpenses: resultado.AMPLIA?.dGastosMedicos || "-",
+        coveragesRaw: {
+          amplia: resultado.AMPLIA || {},
+          limitada: resultado.LIMITADA || {},
+          rc: resultado.RC || {},
+        },
         isHighlighted: false,
         isError: false,
         isLoading: false,
@@ -206,8 +184,8 @@ export class CotizacionService {
             cov.iRoboParcial ?? "-",
             cov.dGastosMedicos ?? "-",
             cov.dFallecimiento ?? "-",
-            cov.bDefensaLegal === "true" || cov.bDefensaLegal === true ? "Sí" : "No",
-            cov.bAsistencialVialCarretera === "true" || cov.bAsistencialVialCarretera === true ? "Sí" : "No",
+            cov.bDefensaLegal ? "Sí" : "No",
+            cov.bAsistencialVialCarretera ? "Sí" : "No",
             cov.iDanoVehiculo ?? "-"
           ])
         })

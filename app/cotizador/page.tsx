@@ -202,17 +202,6 @@ export default function CotizadorPage() {
             return
           }
           const data = await res.json()
-          // Mapeo especial para Mapfre si es necesario
-          if (insurer === "Mapfre" && data.success && Array.isArray(data.resultado)) {
-            const resultado = data.resultado[0]
-            const normalizado = {
-              AMPLIA: resultado.Amplia,
-              LIMITADA: resultado.Limitada,
-              RC: resultado.RC,
-            }
-            updateResult(insurer, { insurer, data: { ...data, resultado: [normalizado] }, loading: false })
-            return
-          }
           updateResult(insurer, { insurer, data, loading: false })
         } catch (err) {
           // Guardar error como data: { success: false, message: ... }
