@@ -13,7 +13,7 @@ interface InsuranceCardProps {
     name: string
     logo: string
     prices?: Record<string, string>
-    deductible?: string
+    deductible?: Record<string, string>
     medicalExpenses?: string
     coveragesRaw?: Record<string, any>
     isError: boolean
@@ -29,6 +29,12 @@ interface InsuranceCardProps {
 
 export function InsuranceCard({ insurer, selectedPlan, isExpanded, onToggleExpand }: InsuranceCardProps) {
   const [showErrorImage, setShowErrorImage] = useState(false);
+
+  function formatMoneda(valor: number | string | undefined) {
+    if (!valor || isNaN(Number(valor))) return "-"
+    const num = parseFloat(valor as string)
+    return `$${num.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
 
   return (
     <div>
@@ -109,10 +115,10 @@ export function InsuranceCard({ insurer, selectedPlan, isExpanded, onToggleExpan
                     {insurer.prices?.[selectedPlan] ?? "-"}
                   </div>
                   <div className="text-gray-600 text-center">
-                    {insurer.deductible ?? "-"}
+                    {(insurer.deductible && insurer.deductible[selectedPlan] !== undefined && insurer.deductible[selectedPlan] !== null && insurer.deductible[selectedPlan] !== "" && insurer.deductible[selectedPlan] !== "0" && insurer.deductible[selectedPlan] !== "0%") ? insurer.deductible[selectedPlan] : "-"}
                   </div>
                   <div className="text-gray-600 text-center">
-                    {insurer.medicalExpenses ?? "-"}
+                    {formatMoneda(insurer.medicalExpenses)}
                   </div>
                   <div className="flex justify-end">
                     <Button

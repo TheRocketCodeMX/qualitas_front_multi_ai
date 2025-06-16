@@ -3,14 +3,18 @@ interface CoverageDetailsProps {
 }
 
 export function CoverageDetails({ coverageObj }: CoverageDetailsProps) {
-  const formatMoneda = (valor: number | string) =>
-    valor ? parseFloat(valor as string).toLocaleString("es-MX", { style: "currency", currency: "MXN" }) : "-"
+  const formatMoneda = (valor: number | string) => {
+    if (!valor) return "-"
+    const num = parseFloat(valor as string)
+    return `$${num.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
 
   const formatPlazo = (plazo: string) => (plazo.toUpperCase() === "ANUAL" ? "1 año" : plazo)
 
-  const formatIncluido = (valor: number | boolean) => {
+  const formatIncluido = (valor: number | boolean, esMoneda: boolean = false) => {
     if (typeof valor === "boolean") return valor ? "Incluido" : "No incluido"
-    return valor > 0 ? "Incluido" : "No incluido"
+    if (valor === 0) return "No incluido"
+    return esMoneda ? formatMoneda(valor) : `${valor}%`
   }
 
   const formatFallecimiento = (valor: number | string) => {
@@ -46,12 +50,12 @@ export function CoverageDetails({ coverageObj }: CoverageDetailsProps) {
           <p className="text-gray-900">{formatMoneda(coverageObj.dDanosTerceros)}</p>
         </div>
         <div>
-          <p className="text-gray-500">Robo Total</p>
+          <p className="text-gray-500">Deducible Robo Total</p>
           <p className="text-gray-900">{formatIncluido(coverageObj.iRoboTotal)}</p>
         </div>
         <div>
-          <p className="text-gray-500">Robo Parcial</p>
-          <p className="text-gray-900">{formatIncluido(coverageObj.iRoboParcial)}</p>
+          <p className="text-gray-500">Cobertura Robo Parcial</p>
+          <p className="text-gray-900">{formatMoneda(coverageObj.iRoboParcial)}</p>
         </div>
         <div>
           <p className="text-gray-500">Gastos Médicos</p>

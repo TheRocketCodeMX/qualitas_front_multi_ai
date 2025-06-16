@@ -18,7 +18,7 @@ export interface Insurer {
   name: string
   logo: string
   prices?: Record<string, string>
-  deductible?: string
+  deductible?: Record<string, string>
   medicalExpenses?: string
   coveragesRaw?: Record<string, any>
   isError: boolean
@@ -91,7 +91,11 @@ export class CotizacionService {
           limitada: resultado.LIMITADA?.dPrecioTotal ? `$${resultado.LIMITADA.dPrecioTotal}` : "-",
           rc: resultado.RC?.dPrecioTotal ? `$${resultado.RC.dPrecioTotal}` : "-",
         },
-        deductible: resultado.AMPLIA?.iDanoVehiculo !== undefined ? `${resultado.AMPLIA.iDanoVehiculo}%` : "-",
+        deductible: {
+          amplia: resultado.AMPLIA?.iRoboTotal !== undefined ? `${resultado.AMPLIA.iRoboTotal}%` : "-",
+          limitada: resultado.LIMITADA?.iRoboTotal !== undefined ? `${resultado.LIMITADA.iRoboTotal}%` : "-",
+          rc: resultado.RC?.iRoboTotal !== undefined ? `${resultado.RC.iRoboTotal}%` : "-",
+        },
         medicalExpenses: resultado.AMPLIA?.dGastosMedicos || "-",
         coveragesRaw: {
           amplia: resultado.AMPLIA || {},
@@ -149,8 +153,8 @@ export class CotizacionService {
         "Precio Total",
         "Plazo",
         "Daños a Terceros",
-        "Robo Total",
-        "Robo Parcial",
+        "Deducible Robo Total",
+        "Cobertura Robo Parcial",
         "Gastos Médicos",
         "Fallecimiento",
         "Defensa Legal",
@@ -203,8 +207,8 @@ export class CotizacionService {
         { wch: 15 }, // Precio Total
         { wch: 10 }, // Plazo
         { wch: 18 }, // Daños a Terceros
-        { wch: 12 }, // Robo Total
-        { wch: 15 }, // Robo Parcial
+        { wch: 12 }, // Deducible Robo Total
+        { wch: 15 }, // Cobertura Robo Parcial
         { wch: 15 }, // Gastos Médicos
         { wch: 15 }, // Fallecimiento
         { wch: 15 }, // Defensa Legal

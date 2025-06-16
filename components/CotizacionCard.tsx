@@ -19,8 +19,10 @@ interface CotizacionCardProps {
   }
 }
 
-function formatMoneda(valor: number) {
-  return valor ? valor.toLocaleString("es-MX", { style: "currency", currency: "MXN" }) : "-"
+function formatMoneda(valor: number | string) {
+  if (!valor) return "-"
+  const num = parseFloat(valor as string)
+  return `$${num.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function formatPlazo(plazo: string) {
@@ -28,14 +30,16 @@ function formatPlazo(plazo: string) {
   return plazo
 }
 
-function formatIncluido(valor: number | boolean) {
+function formatIncluido(valor: number | boolean, esMoneda: boolean = false) {
   if (typeof valor === "boolean") return valor ? "Incluido" : "No incluido"
-  return valor > 0 ? "Incluido" : "No incluido"
+  if (valor === 0) return "No incluido"
+  return esMoneda ? formatMoneda(valor) : `${valor}%`
 }
 
-function formatFallecimiento(valor: number) {
-  if (valor < 1000) return valor + "%"
-  return formatMoneda(valor)
+function formatFallecimiento(valor: number | string) {
+  const num = parseFloat(valor as string)
+  if (num < 1000) return `${num}%`
+  return formatMoneda(num)
 }
 
 export const CotizacionCard: React.FC<CotizacionCardProps> = ({ cotizacion }) => {
@@ -67,12 +71,12 @@ export const CotizacionCard: React.FC<CotizacionCardProps> = ({ cotizacion }) =>
           <span className="block text-base text-gray-900">{formatMoneda(cotizacion.danosTerceros)}</span>
         </div>
         <div>
-          <span className="block text-xs text-gray-500 font-medium">Robo Total</span>
+          <span className="block text-xs text-gray-500 font-medium">Deducible Robo Total</span>
           <span className="block text-base text-gray-900">{formatIncluido(cotizacion.roboTotal)}</span>
         </div>
         <div>
-          <span className="block text-xs text-gray-500 font-medium">Robo Parcial</span>
-          <span className="block text-base text-gray-900">{formatIncluido(cotizacion.roboParcial)}</span>
+          <span className="block text-xs text-gray-500 font-medium">Cobertura Robo Parcial</span>
+          <span className="block text-base text-gray-900">{formatMoneda(cotizacion.roboParcial)}</span>
         </div>
         <div>
           <span className="block text-xs text-gray-500 font-medium">Gastos Médicos</span>
