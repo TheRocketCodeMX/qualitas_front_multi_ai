@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { useAuthGuard } from "@/hooks/useAuthGuard"
 import DashboardLayout from "@/components/layout/DashboardLayout"
 import { Button } from "@/components/ui/button"
@@ -21,13 +20,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { cotizacionMasivaService, EstadoLoteResponse } from "@/services/cotizacionMasivaService"
 
-interface Solicitud {
-  id: string
-  fechaCarga: string
-  numeroRegistros: number
-  estatus: "En proceso" | "Completado"
-}
+// Componentes modulares
+import CatalogoHeader from "./components/CatalogoHeader"
+import CatalogoActions from "./components/CatalogoActions"
+import CatalogoMessages from "./components/CatalogoMessages"
+import CatalogoSummary from "./components/CatalogoSummary"
+import CatalogoTable from "./components/CatalogoTable"
+import CatalogoPagination from "./components/CatalogoPagination"
+import CatalogoUploadModal from "./components/CatalogoUploadModal"
 
 export default function CatalogoPage() {
   const { isAuthenticated, isLoading } = useAuthGuard()
@@ -35,15 +37,14 @@ export default function CatalogoPage() {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
+  const [solicitudes, setSolicitudes] = useState<EstadoLoteResponse[]>([])
   const [showSolicitudes, setShowSolicitudes] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const [validatedData, setValidatedData] = useState<any[]>([])
-  const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [loteEnProceso, setLoteEnProceso] = useState<EstadoLoteResponse | null>(null)
 
   const itemsPerPage = 5
   const totalPages = Math.ceil(solicitudes.length / itemsPerPage)
@@ -51,16 +52,53 @@ export default function CatalogoPage() {
   const endIndex = startIndex + itemsPerPage
   const currentSolicitudes = solicitudes.slice(startIndex, endIndex)
 
-  // Auto-refresh cada 10 segundos
-  useEffect(() => {
-    if (showSolicitudes) {
-      const interval = setInterval(() => {
-        actualizarEstados()
-      }, 10000)
-
-      return () => clearInterval(interval)
+  const fetchSolicitudes = useCallback(async () => {
+    try {
+      const response = await cotizacionMasivaService.consultarEstado()
+      setSolicitudes(response.lotes)
+      console.log("Solicitudes cargadas:", response.lotes)
+    } catch (error) {
+      console.error("Error al obtener solicitudes:", error)
     }
-  }, [showSolicitudes])
+  }, [])
+
+  const refreshLoteEnProceso = useCallback(async (idLote: number | undefined | null) => {
+    if (typeof idLote !== 'number' || isNaN(idLote)) return; // Solo continuar si idLote es un número válido
+    try {
+      setIsRefreshing(true);
+      const response = await cotizacionMasivaService.consultarEstadoLote(idLote);
+      const lote = response.lote; // Desestructura correctamente
+      setSolicitudes(prev => prev.map(s => s.idLote === idLote ? { ...s, ...lote } : s));
+      if (lote.estadoLote === "COMPLETADO") {
+        setLoteEnProceso(null);
+      } else {
+        setLoteEnProceso(lote);
+      }
+    } catch (error) {
+      console.error("Error al actualizar estado:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [])
+
+  // Efecto para identificar el lote en proceso al cargar o cuando cambian las solicitudes
+  useEffect(() => {
+    const lote = solicitudes.find(s => s.estadoLote === "EN_PROCESO");
+    setLoteEnProceso(lote || null); // Si no hay, explícitamente null
+  }, [solicitudes]);
+
+  // Efecto para actualización automática del lote en proceso
+  useEffect(() => {
+    if (!loteEnProceso || typeof loteEnProceso.idLote !== 'number' || isNaN(loteEnProceso.idLote)) return;
+    const interval = setInterval(() => {
+      refreshLoteEnProceso(loteEnProceso.idLote);
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [loteEnProceso, refreshLoteEnProceso]);
+
+  useEffect(() => {
+    fetchSolicitudes()
+  }, [fetchSolicitudes])
 
   if (isLoading) {
     return (
@@ -72,53 +110,6 @@ export default function CatalogoPage() {
 
   if (!isAuthenticated) {
     return null
-  }
-
-  // Función para simular actualización de estados
-  const actualizarEstados = () => {
-    setSolicitudes((prev) =>
-      prev.map((solicitud) => {
-        if (solicitud.estatus === "En proceso") {
-          // 40% de probabilidad de cambiar a "Completado"
-          if (Math.random() < 0.4) {
-            return { ...solicitud, estatus: "Completado" }
-          }
-        }
-        return solicitud
-      }),
-    )
-  }
-
-  // Función para actualización manual
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000)) // Simular delay
-    actualizarEstados()
-    setIsRefreshing(false)
-    toast({
-      title: "Actualizado",
-      description: "El estado de las solicitudes se ha actualizado.",
-      duration: 2000,
-    })
-  }
-
-  // Calcular totales por estado
-  const totales = {
-    total: solicitudes.length,
-    enProceso: solicitudes.filter((s) => s.estatus === "En proceso").length,
-    completado: solicitudes.filter((s) => s.estatus === "Completado").length,
-  }
-
-  const handlePreviousPage = () => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1))
-  }
-
-  const handleNextPage = () => {
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-  }
-
-  const handlePageClick = (page: number) => {
-    setCurrentPage(page)
   }
 
   // Función para descargar el layout de Excel
@@ -187,199 +178,8 @@ export default function CatalogoPage() {
   }
 
   // Función para descargar los resultados procesados
-  const handleDownloadResults = (solicitud: Solicitud) => {
-    try {
-      // Crear headers para el Excel con estructura detallada
-      const headers = [
-        "Número",
-        "Marca",
-        "Modelo",
-        "Año",
-        "Año nacimiento",
-        "CP",
-        "Género",
-        // CHUBB
-        "CHUBB - Amplia - Prima Anual",
-        "CHUBB - Amplia - Deducible",
-        "CHUBB - Amplia - Gastos Médicos",
-        "CHUBB - Amplia - Coberturas",
-        "CHUBB - Limitada - Prima Anual",
-        "CHUBB - Limitada - Deducible",
-        "CHUBB - Limitada - Gastos Médicos",
-        "CHUBB - Limitada - Coberturas",
-        "CHUBB - RC - Prima Anual",
-        "CHUBB - RC - Deducible",
-        "CHUBB - RC - Gastos Médicos",
-        "CHUBB - RC - Coberturas",
-        // MAPFRE
-        "MAPFRE - Amplia - Prima Anual",
-        "MAPFRE - Amplia - Deducible",
-        "MAPFRE - Amplia - Gastos Médicos",
-        "MAPFRE - Amplia - Coberturas",
-        "MAPFRE - Limitada - Prima Anual",
-        "MAPFRE - Limitada - Deducible",
-        "MAPFRE - Limitada - Gastos Médicos",
-        "MAPFRE - Limitada - Coberturas",
-        "MAPFRE - RC - Prima Anual",
-        "MAPFRE - RC - Deducible",
-        "MAPFRE - RC - Gastos Médicos",
-        "MAPFRE - RC - Coberturas",
-        // GNP
-        "GNP - Amplia - Prima Anual",
-        "GNP - Amplia - Deducible",
-        "GNP - Amplia - Gastos Médicos",
-        "GNP - Amplia - Coberturas",
-        "GNP - Limitada - Prima Anual",
-        "GNP - Limitada - Deducible",
-        "GNP - Limitada - Gastos Médicos",
-        "GNP - Limitada - Coberturas",
-        "GNP - RC - Prima Anual",
-        "GNP - RC - Deducible",
-        "GNP - RC - Gastos Médicos",
-        "GNP - RC - Coberturas",
-        // HDI
-        "HDI - Amplia - Prima Anual",
-        "HDI - Amplia - Deducible",
-        "HDI - Amplia - Gastos Médicos",
-        "HDI - Limitada - Prima Anual",
-        "HDI - Limitada - Deducible",
-        "HDI - Limitada - Gastos Médicos",
-        "HDI - Limitada - Coberturas",
-        "HDI - RC - Prima Anual",
-        "HDI - RC - Deducible",
-        "HDI - RC - Gastos Médicos",
-        "HDI - RC - Coberturas",
-        // AXA
-        "AXA - Amplia - Prima Anual",
-        "AXA - Amplia - Deducible",
-        "AXA - Amplia - Gastos Médicos",
-        "AXA - Amplia - Coberturas",
-        "AXA - Limitada - Prima Anual",
-        "AXA - Limitada - Deducible",
-        "AXA - Limitada - Gastos Médicos",
-        "AXA - Limitada - Coberturas",
-        "AXA - RC - Prima Anual",
-        "AXA - RC - Deducible",
-        "AXA - RC - Gastos Médicos",
-        "AXA - RC - Coberturas",
-      ]
-
-      // Generar datos de ejemplo para los resultados procesados
-      const resultData = [headers]
-
-      const aseguradoras = ["CHUBB", "MAPFRE", "GNP", "HDI", "AXA"]
-      const marcas = ["Honda", "Toyota", "Nissan", "Volkswagen", "Chevrolet"]
-      const modelos = ["CRV", "Corolla", "Sentra", "Jetta", "Aveo"]
-      const coberturas = ["Amplia", "Limitada", "RC"]
-
-      for (let i = 1; i <= solicitud.numeroRegistros; i++) {
-        const vehicleData = [
-          i, // Número
-          marcas[Math.floor(Math.random() * marcas.length)], // Marca
-          modelos[Math.floor(Math.random() * modelos.length)], // Modelo
-          2015 + Math.floor(Math.random() * 9), // Año 2015-2023
-          1970 + Math.floor(Math.random() * 35), // Año nacimiento 1970-2004
-          String(10000 + Math.floor(Math.random() * 90000)).substring(0, 5), // CP
-          Math.random() > 0.5 ? "Masculino" : "Femenino", // Género
-        ]
-
-        // Generar datos para cada aseguradora y cobertura
-        const insuranceData: any[] = []
-
-        aseguradoras.forEach((aseguradora) => {
-          coberturas.forEach((cobertura) => {
-            let basePrice = 0
-            let deducible = ""
-            let gastosMedicos = ""
-            let coberturaDesc = ""
-
-            // Configurar precios base según cobertura
-            switch (cobertura) {
-              case "Amplia":
-                basePrice = 8000 + Math.floor(Math.random() * 4000)
-                deducible = "10% del valor comercial"
-                gastosMedicos = `$${(150000 + Math.floor(Math.random() * 100000)).toLocaleString()}`
-                coberturaDesc = "Robo total, Daños materiales, RC, Gastos médicos, Asistencia"
-                break
-              case "Limitada":
-                basePrice = 4000 + Math.floor(Math.random() * 2000)
-                deducible = "5% del valor comercial"
-                gastosMedicos = `$${(50000 + Math.floor(Math.random() * 50000)).toLocaleString()}`
-                coberturaDesc = "RC, Gastos médicos, Asistencia"
-                break
-              case "RC":
-                basePrice = 2500 + Math.floor(Math.random() * 1500)
-                deducible = "N/A"
-                gastosMedicos = `$${(30000 + Math.floor(Math.random() * 20000)).toLocaleString()}`
-                coberturaDesc = "Responsabilidad Civil únicamente"
-                break
-            }
-
-            insuranceData.push(
-              `$${basePrice.toLocaleString()}`, // Prima Anual
-              deducible, // Deducible
-              gastosMedicos, // Gastos Médicos
-              coberturaDesc, // Coberturas
-            )
-          })
-        })
-
-        // Combinar datos del vehículo con datos de seguros
-        const row = [...vehicleData, ...insuranceData]
-        resultData.push(row)
-      }
-
-      // Crear workbook y worksheet
-      const wb = XLSX.utils.book_new()
-      const ws = XLSX.utils.aoa_to_sheet(resultData)
-
-      // Ajustar ancho de columnas
-      const colWidths = [
-        { wch: 8 }, // Número
-        { wch: 12 }, // Marca
-        { wch: 12 }, // Modelo
-        { wch: 8 }, // Año
-        { wch: 15 }, // Año nacimiento
-        { wch: 8 }, // CP
-        { wch: 12 }, // Género
-        // Repetir para cada aseguradora y cobertura (60 columnas más)
-        ...Array(60).fill({ wch: 18 }),
-      ]
-      ws["!cols"] = colWidths
-
-      // Agregar worksheet al workbook
-      XLSX.utils.book_append_sheet(wb, ws, "Resultados Detallados")
-
-      // Generar archivo y descargar
-      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" })
-      const blob = new Blob([wbout], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      })
-      const url = URL.createObjectURL(blob)
-
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `resultados_detallados_${solicitud.id}.xlsx`
-      document.body.appendChild(link)
-      link.click()
-
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-
-      toast({
-        title: "Resultados descargados",
-        description: `El archivo resultados_detallados_${solicitud.id}.xlsx se ha descargado correctamente.`,
-        duration: 3000,
-      })
-    } catch (error) {
-      console.error("Error al descargar los resultados:", error)
-      toast({
-        title: "Error",
-        description: "No se pudieron descargar los resultados. Inténtalo de nuevo.",
-        variant: "destructive",
-        duration: 3000,
-      })
-    }
+  const handleDownloadResults = (nombreLote: string) => {
+    // Implementar descarga de resultados
   }
 
   // Función para validar el formato del layout
@@ -510,7 +310,6 @@ export default function CatalogoPage() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setUploadError(null)
     setUploadSuccess(null)
-    setValidationErrors([])
 
     const file = event.target.files?.[0]
     if (!file) return
@@ -556,7 +355,6 @@ export default function CatalogoPage() {
         const validation = validateLayoutFormat(jsonData)
 
         if (!validation.isValid) {
-          setValidationErrors(validation.errors)
           setUploadError("El archivo no cumple con el formato requerido. Revisa los errores detallados.")
           setIsUploading(false)
           if (fileInputRef.current) fileInputRef.current.value = ""
@@ -564,8 +362,7 @@ export default function CatalogoPage() {
         }
 
         // Si la validación es exitosa, mostrar modal de confirmación
-        setValidatedData(validation.validData)
-        setShowConfirmModal(true)
+        setIsModalOpen(true)
         setIsUploading(false)
       } catch (error) {
         console.error("Error al procesar el archivo:", error)
@@ -584,54 +381,24 @@ export default function CatalogoPage() {
     reader.readAsArrayBuffer(file)
   }
 
-  // Función para confirmar y procesar los datos validados
-  const handleConfirmProcessing = () => {
-    const recordCount = validatedData.length
-
-    // Crear nuevas solicitudes basadas en los registros validados
-    const nuevasSolicitudes: Solicitud[] = []
-    const registrosPorSolicitud = 10 // Dividir en grupos de 10 registros
-
-    for (let i = 0; i < recordCount; i += registrosPorSolicitud) {
-      const registrosEnGrupo = Math.min(registrosPorSolicitud, recordCount - i)
-      const nuevaSolicitud: Solicitud = {
-        id: `SOL-${Date.now()}-${Math.floor(i / registrosPorSolicitud + 1)}`,
-        fechaCarga: new Date().toLocaleString("es-ES"),
-        numeroRegistros: registrosEnGrupo,
-        estatus: "En proceso",
-      }
-      nuevasSolicitudes.push(nuevaSolicitud)
-    }
-
-    setSolicitudes((prev) => [...prev, ...nuevasSolicitudes])
-    setShowSolicitudes(true)
-    setCurrentPage(1)
-
-    setUploadSuccess(
-      `Archivo procesado correctamente. ${recordCount} registros válidos procesados en ${nuevasSolicitudes.length} solicitudes.`,
-    )
-
-    toast({
-      title: "Archivo procesado",
-      description: `Se han creado ${nuevasSolicitudes.length} solicitudes de procesamiento.`,
-      duration: 3000,
-    })
-
-    // Limpiar estados
-    setShowConfirmModal(false)
-    setValidatedData([])
-    setValidationErrors([])
-    if (fileInputRef.current) fileInputRef.current.value = ""
+  const handleUpload = () => {
+    setIsModalOpen(true)
   }
 
-  const getStatusBadge = (estatus: Solicitud["estatus"]) => {
-    switch (estatus) {
-      case "En proceso":
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">🟡 En proceso</Badge>
-      case "Completado":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">🟢 Completado</Badge>
-      default:
-        return <Badge variant="secondary">{estatus}</Badge>
+  const handleValidationComplete = async (vehiculosValidos: any[]) => {
+    try {
+      const result = await cotizacionMasivaService.procesarCotizacion(vehiculosValidos)
+      setUploadSuccess(`Lote ${result.nombreLote} creado correctamente`)
+      fetchSolicitudes() // Actualizar la lista de solicitudes
+    } catch (error) {
+      setUploadError("Error al procesar la cotización")
+    }
+  }
+
+  const handleRefreshStatus = (nombreLote: string) => {
+    const lote = solicitudes.find(s => s.nombreLote === nombreLote)
+    if (lote) {
+      refreshLoteEnProceso(lote.idLote)
     }
   }
 
@@ -639,69 +406,20 @@ export default function CatalogoPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Catálogo de datos</h1>
-          <p className="text-gray-600 mt-1">Casos de uso</p>
-        </div>
+        <CatalogoHeader />
 
         {/* Mensajes de error/éxito */}
-        {uploadError && (
-          <Alert variant="destructive" className="mb-4 border-red-200 bg-red-50">
-            <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-            <AlertDescription className="text-red-600 font-medium">{uploadError}</AlertDescription>
-          </Alert>
-        )}
-
-        {uploadSuccess && (
-          <Alert className="mb-4 border-[#8BC34A] bg-[#F8FFF8]">
-            <CheckCircle className="h-5 w-5 text-[#8BC34A] mr-2" />
-            <AlertDescription className="text-[#8BC34A] font-medium">{uploadSuccess}</AlertDescription>
-          </Alert>
-        )}
-
-        {validationErrors.length > 0 && (
-          <Alert variant="destructive" className="mb-4 border-red-200 bg-red-50">
-            <div className="flex">
-              <AlertCircle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p className="font-medium text-red-600">Errores de validación encontrados:</p>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-red-600">
-                    {validationErrors.slice(0, 10).map((error, index) => (
-                      <li key={index}>{error}</li>
-                    ))}
-                    {validationErrors.length > 10 && (
-                      <li className="text-red-500">... y {validationErrors.length - 10} errores más</li>
-                    )}
-                  </ul>
-                </div>
-              </AlertDescription>
-            </div>
-          </Alert>
-        )}
+        <CatalogoMessages
+          uploadError={uploadError}
+          uploadSuccess={uploadSuccess}
+        />
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap justify-end gap-3">
-          <Button className="bg-[#8BC34A] hover:bg-[#7CB342] text-white" onClick={handleDownloadLayout}>
-            <Download className="h-4 w-4 mr-2" />
-            Descargar Layout
-          </Button>
-
-          <div className="relative">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".xls,.xlsx"
-              onChange={handleFileUpload}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              disabled={isUploading}
-            />
-            <Button variant="outline" className="border-gray-300 text-gray-700" disabled={isUploading}>
-              <Upload className="h-4 w-4 mr-2" />
-              {isUploading ? "Cargando..." : "Cargar Base"}
-            </Button>
-          </div>
-        </div>
+        <CatalogoActions
+          onDownloadLayout={handleDownloadLayout}
+          onFileUpload={handleFileUpload}
+          isUploading={isUploading}
+        />
 
         {/* Sección de Estado de solicitudes procesadas */}
         {showSolicitudes && (
@@ -711,7 +429,11 @@ export default function CatalogoPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleRefresh}
+                onClick={async () => {
+                  setIsRefreshing(true);
+                  await fetchSolicitudes();
+                  setIsRefreshing(false);
+                }}
                 disabled={isRefreshing}
                 className="text-[#8BC34A] border-[#8BC34A]"
               >
@@ -721,167 +443,38 @@ export default function CatalogoPage() {
             </div>
 
             {/* Resumen superior */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Total de solicitudes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">{totales.total}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">En proceso</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-yellow-600">{totales.enProceso}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Completadas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{totales.completado}</div>
-                </CardContent>
-              </Card>
-            </div>
+            <CatalogoSummary
+              total={solicitudes.length}
+              enProceso={solicitudes.filter(s => s.estadoLote === "EN_PROCESO").length}
+              completado={solicitudes.filter(s => s.estadoLote === "COMPLETADO").length}
+            />
 
             {/* Tabla de solicitudes */}
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="font-medium">ID de solicitud</TableHead>
-                      <TableHead className="font-medium">Fecha y hora de carga</TableHead>
-                      <TableHead className="font-medium">Número de registros</TableHead>
-                      <TableHead className="font-medium">Estatus actual</TableHead>
-                      <TableHead className="font-medium">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentSolicitudes.map((solicitud) => (
-                      <TableRow key={solicitud.id} className="border-t border-gray-200">
-                        <TableCell className="font-mono text-sm">{solicitud.id}</TableCell>
-                        <TableCell>{solicitud.fechaCarga}</TableCell>
-                        <TableCell>{solicitud.numeroRegistros}</TableCell>
-                        <TableCell>{getStatusBadge(solicitud.estatus)}</TableCell>
-                        <TableCell>
-                          {solicitud.estatus === "Completado" ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 px-2 text-[#8BC34A]"
-                              onClick={() => handleDownloadResults(solicitud)}
-                            >
-                              <Download className="h-4 w-4 mr-1" />
-                              Descargar
-                            </Button>
-                          ) : (
-                            <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-400" disabled>
-                              <Eye className="h-4 w-4 mr-1" />
-                              Procesando...
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+            <CatalogoTable
+              solicitudes={solicitudes}
+              onDownloadResults={handleDownloadResults}
+              onRefreshStatus={handleRefreshStatus}
+              isRefreshing={isRefreshing}
+            />
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center py-4 border-t border-gray-200">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePreviousPage}
-                      disabled={currentPage === 1}
-                      className="h-8 px-2 text-[#8BC34A] border-[#8BC34A]"
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Anterior
-                    </Button>
-
-                    {[...Array(totalPages)].map((_, i) => {
-                      const page = i + 1
-                      return (
-                        <Button
-                          key={page}
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handlePageClick(page)}
-                          className={`h-8 w-8 p-0 ${
-                            currentPage === page
-                              ? "bg-[#8BC34A] hover:bg-[#7CB342] text-white"
-                              : "text-gray-600 border-gray-300"
-                          }`}
-                        >
-                          {page}
-                        </Button>
-                      )
-                    })}
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleNextPage}
-                      disabled={currentPage === totalPages}
-                      className="h-8 px-2 text-[#8BC34A] border-[#8BC34A]"
-                    >
-                      Siguiente
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Pagination */}
+            {/*<CatalogoPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />*/}
           </div>
         )}
 
-        {/* Modal de confirmación */}
-        <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Confirmar procesamiento</DialogTitle>
-              <DialogDescription>
-                Se han validado {validatedData.length} registros correctamente. ¿Deseas proceder con el procesamiento de
-                estos datos?
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <div className="text-sm text-gray-600">
-                <p>
-                  <strong>Registros válidos:</strong> {validatedData.length}
-                </p>
-                <p>
-                  <strong>Solicitudes a procesar:</strong> {Math.ceil(validatedData.length / 10)}
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowConfirmModal(false)
-                  setValidatedData([])
-                  if (fileInputRef.current) fileInputRef.current.value = ""
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleConfirmProcessing} className="bg-[#8BC34A] hover:bg-[#7CB342] text-white">
-                Confirmar procesamiento
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CatalogoUploadModal
+          isOpen={isModalOpen}
+          onClose={async () => {
+            console.log("onClose del padre ejecutado");
+            setIsModalOpen(false);
+            await fetchSolicitudes();
+          }}
+          onValidationComplete={handleValidationComplete}
+        />
       </div>
     </DashboardLayout>
   )
