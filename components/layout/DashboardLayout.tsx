@@ -9,6 +9,7 @@ import { Menu, Search, Database, LogOut, ChevronLeft, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Logo } from "@/components/ui/logo"
+import { Loader } from "@/components/ui/loader"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -20,10 +21,24 @@ const navigation = [
 ]
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, logout } = useAuth()
+  const { user, logout, isLoading, isAuthenticated } = useAuth()
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+
+  // Función para obtener las iniciales del nombre
+  const getInitials = () => {
+    if (!user) return "U";
+    const nombre = user.vnombre || "";
+    const apellido = user.vapellidoPaterno || "";
+    return (nombre.charAt(0) + apellido.charAt(0)).toUpperCase();
+  }
+
+  // Función para obtener el nombre completo
+  const getFullName = () => {
+    if (!user) return "Usuario";
+    return `${user.vnombre || ""} ${user.vapellidoPaterno || ""}`.trim();
+  }
 
   const handleLogout = () => {
     logout()
@@ -78,12 +93,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex items-center space-x-3 mb-3">
           <div className="flex-shrink-0">
             <div className="w-8 h-8 bg-[#8BC34A] rounded-full flex items-center justify-center">
-              <User className="h-4 w-4 text-white" />
+              <span className="text-white text-sm font-medium">{getInitials()}</span>
             </div>
           </div>
           {!isSidebarCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">Juan Pérez</p>
+              <p className="text-sm font-medium text-gray-900 truncate">{getFullName()}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.vemail}</p>
             </div>
           )}
         </div>
@@ -99,6 +115,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
     </div>
   )
+
+  if (isLoading) {
+    return (
+      <Loader 
+        fullScreen 
+        size="lg"
+        text="Verificando sesión..."
+      />
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -125,9 +155,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-end px-6">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-[#8BC34A] rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-medium">JP</span>
+              <span className="text-white text-sm font-medium">{getInitials()}</span>
             </div>
-            <span className="text-sm font-medium text-gray-900">Juan Pérez</span>
+            <span className="text-sm font-medium text-gray-900">{getFullName()}</span>
           </div>
         </div>
 

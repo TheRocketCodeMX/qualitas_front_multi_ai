@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Car } from "lucide-react"
 import Image from "next/image"
+import { Loader } from "@/components/ui/loader"
 
 export default function CotizadorPage() {
   const { isAuthenticated, isLoading } = useAuthGuard()
@@ -54,19 +55,23 @@ export default function CotizadorPage() {
     setIsMounted(true)
   }, [])
 
-  // Don't render anything on the server
+  // No renderizar nada en el servidor
   if (!isMounted) {
     return null
   }
 
+  // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#8BC34A]"></div>
-      </div>
+      <Loader 
+        fullScreen 
+        size="lg"
+        text="Cargando cotizador..."
+      />
     )
   }
 
+  // Si no está autenticado, no renderizar nada (useAuthGuard se encargará de la redirección)
   if (!isAuthenticated) {
     return null
   }

@@ -1,103 +1,84 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import type { User, LoginRequest } from "@/types"
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authService } from '@/services/authService';
+import { useRouter } from 'next/navigation';
 
-interface AuthContextType {
-  user: User | null
-  login: (credentials: LoginRequest) => Promise<void>
-  logout: () => void
-  isAuthenticated: boolean
-  isLoading: boolean
+interface Usuario {
+  vapellidoPaterno: string;
+  vapellidoMaterno: string;
+  dfechaCreacion: string;
+  vemail: string;
+  iusuarioId: number;
+  vnombre: string;
 }
 
-// Create a default context value to avoid the "must be used within a Provider" error
+interface AuthContextType {
+  user: Usuario | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  isAuthenticated: boolean;
+}
+
+// Crear un valor por defecto para el contexto
 const defaultContextValue: AuthContextType = {
   user: null,
   login: async () => {
-    console.error("AuthProvider not initialized")
+    throw new Error('AuthProvider no inicializado');
   },
   logout: () => {
-    console.error("AuthProvider not initialized")
+    throw new Error('AuthProvider no inicializado');
   },
   isAuthenticated: false,
-  isLoading: true,
-}
+};
 
-const AuthContext = createContext<AuthContextType>(defaultContextValue)
+const AuthContext = createContext<AuthContextType>(defaultContextValue);
 
-export const useAuth = () => {
-  return useContext(AuthContext)
-}
-
-interface AuthProviderProps {
-  children: ReactNode
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<Usuario | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const router = useRouter();
 
   useEffect(() => {
-    // Verificar si hay un token guardado al inicializar
-    try {
-      if (typeof window !== "undefined") {
-        const savedUser = localStorage.getItem("currentUser")
-        if (savedUser) {
-          try {
-            const parsedUser = JSON.parse(savedUser)
-            setUser(parsedUser)
-          } catch (error) {
-            localStorage.removeItem("currentUser")
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error accessing localStorage:", error)
-    } finally {
-      setIsLoading(false)
+    const token = authService.getToken();
+    if (token) {
+      setIsAuthenticated(true);
+      // Aquí podrías hacer una llamada al backend para obtener los datos del usuario
+      // usando el token almacenado
     }
-  }, [])
+  }, []);
 
-  const login = async (credentials: LoginRequest): Promise<void> => {
-    setIsLoading(true)
+  const login = async (email: string, password: string) => {
     try {
-      // Simulación de API call - en un entorno real, esto sería una llamada a la API
-      await new Promise((resolve) => setTimeout(resolve, 800)) // Simular delay de red
-
-      const userData: User = {
-        id: "user-123",
-        email: credentials.email,
-        name: credentials.email.split("@")[0],
-        token: "jwt-token-simulated-123456789",
-      }
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("currentUser", JSON.stringify(userData))
-      }
-      setUser(userData)
+      const response = await authService.login({ vEmail: email, vPassword: password });
+      authService.setToken(response.token);
+      setUser(response.usuario);
+      setIsAuthenticated(true);
+      router.replace('/cotizador');
     } catch (error) {
-      throw error
-    } finally {
-      setIsLoading(false)
+      console.error('Error durante el login:', error);
+      throw error;
     }
-  }
+  };
 
   const logout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("currentUser")
-    }
-    setUser(null)
-  }
+    authService.removeToken();
+    setUser(null);
+    setIsAuthenticated(false);
+    router.replace('/login');
+  };
 
-  const value: AuthContextType = {
-    user,
-    login,
-    logout,
-    isAuthenticated: !!user?.token,
-    isLoading,
-  }
+  return (
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+  }
+  return context;
 }
