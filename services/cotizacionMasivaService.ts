@@ -1,6 +1,5 @@
 import { ValidacionResponse, VehiculoValido } from "../types/cotizacion"
-
-const API_URL = "http://localhost:8080/cotizacion-api/api/cotizacion-masiva"
+import { getApiUrl, getEndpoint } from '../lib/config';
 
 export interface EstadoLoteResponse {
   idLote: number
@@ -28,7 +27,10 @@ export const cotizacionMasivaService = {
     const formData = new FormData()
     formData.append("file", file)
 
-    const response = await fetch(`${API_URL}/cargar-excel`, {
+    const apiUrl = getApiUrl('cotizacion');
+    const endpoint = getEndpoint('cotizacion', 'cargarExcel');
+
+    const response = await fetch(`${apiUrl}${endpoint}`, {
       method: "POST",
       body: formData,
     })
@@ -41,7 +43,10 @@ export const cotizacionMasivaService = {
   },
 
   procesarCotizacion: async (vehiculosValidos: VehiculoValido[]): Promise<{ nombreLote: string; estadoInicial: "EN_PROCESO" | "EN_COLA" }> => {
-    const response = await fetch(`${API_URL}/cotizar`, {
+    const apiUrl = getApiUrl('cotizacion');
+    const endpoint = getEndpoint('cotizacion', 'cotizar');
+
+    const response = await fetch(`${apiUrl}${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -57,7 +62,10 @@ export const cotizacionMasivaService = {
   },
 
   consultarEstado: async (): Promise<EstadoCotizacionResponse> => {
-    const response = await fetch(`${API_URL}/consultar-estado`, {
+    const apiUrl = getApiUrl('cotizacion');
+    const endpoint = getEndpoint('cotizacion', 'consultarEstado');
+
+    const response = await fetch(`${apiUrl}${endpoint}`, {
       method: "GET",
     })
 
@@ -69,7 +77,10 @@ export const cotizacionMasivaService = {
   },
 
   consultarEstadoLote: async (idLote: number): Promise<EstadoLoteResponse> => {
-    const response = await fetch(`${API_URL}/consultar-estado/${idLote}`, {
+    const apiUrl = getApiUrl('cotizacion');
+    const endpoint = getEndpoint('cotizacion', 'consultarEstadoLote', idLote);
+
+    const response = await fetch(`${apiUrl}${endpoint}`, {
       method: "GET",
     })
 

@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8081/account-api/api';
+import { getApiUrl, getEndpoint } from '../lib/config';
 
 export interface PasswordResetResponse {
   success: boolean;
@@ -16,7 +16,10 @@ export interface TokenValidationResponse {
 
 export const passwordResetService = {
   async requestReset(email: string): Promise<PasswordResetResponse> {
-    const response = await fetch(`${API_BASE_URL}/password/reset-request`, {
+    const apiUrl = getApiUrl('account');
+    const endpoint = getEndpoint('account', 'passwordResetRequest');
+
+    const response = await fetch(`${apiUrl}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -32,7 +35,10 @@ export const passwordResetService = {
   },
 
   async validateToken(token: string): Promise<TokenValidationResponse> {
-    const response = await fetch(`${API_BASE_URL}/password/validate-token/${token}`, {
+    const apiUrl = getApiUrl('account');
+    const endpoint = getEndpoint('account', 'passwordValidateToken', token);
+
+    const response = await fetch(`${apiUrl}${endpoint}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -47,7 +53,10 @@ export const passwordResetService = {
   },
 
   async resetPassword(token: string, newPassword: string): Promise<PasswordResetResponse> {
-    const response = await fetch(`${API_BASE_URL}/password/reset-confirm`, {
+    const apiUrl = getApiUrl('account');
+    const endpoint = getEndpoint('account', 'passwordResetConfirm');
+
+    const response = await fetch(`${apiUrl}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

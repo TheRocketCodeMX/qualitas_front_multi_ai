@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getApiUrl, getEndpoint } from '../lib/config';
 
 interface LoginCredentials {
   vEmail: string;
@@ -20,11 +21,11 @@ interface LoginResponse {
   token: string;
 }
 
-const API_URL = 'http://localhost:8081/account-api/api';
-
 export const authService = {
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    const response = await axios.post<LoginResponse>(`${API_URL}/cuenta/login`, credentials);
+    const apiUrl = getApiUrl('account');
+    const endpoint = getEndpoint('account', 'login');
+    const response = await axios.post<LoginResponse>(`${apiUrl}${endpoint}`, credentials);
     return response.data;
   },
 

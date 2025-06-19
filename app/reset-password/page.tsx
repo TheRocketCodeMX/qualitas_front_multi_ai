@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Logo } from "@/components/ui/logo"
 import { Loader } from "@/components/ui/loader"
+import { Skeleton } from "@/components/ui/skeleton"
 import { passwordResetService } from "@/services/passwordResetService"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -17,6 +18,7 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [tokenValid, setTokenValid] = useState(false)
   const [email, setEmail] = useState("")
@@ -88,7 +90,7 @@ export default function ResetPasswordPage() {
       return
     }
 
-    setIsLoading(true)
+    setIsSubmitting(true)
 
     try {
       if (!token) throw new Error("Token no proporcionado")
@@ -102,89 +104,118 @@ export default function ResetPasswordPage() {
     } catch (error) {
       setError("Error al actualizar la contraseña. Por favor, intenta nuevamente.")
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
     }
   }
 
   if (isLoading) {
-    return <Loader fullScreen size="lg" text="Verificando enlace..." />
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="w-full max-w-md border-0 shadow-lg">
+          <CardContent className="pt-8">
+            <div className="flex justify-center mb-8">
+              <Skeleton className="h-12 w-12 rounded" />
+            </div>
+            <div className="text-center">
+              <Skeleton className="h-8 w-48 mx-auto mb-4" />
+              <Skeleton className="h-4 w-64 mx-auto mb-6" />
+              <div className="space-y-4">
+                <Skeleton className="h-4 w-32 mx-auto" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md border-0 shadow-lg">
-        <CardContent className="pt-8">
-          <div className="flex justify-center mb-8">
-            <Logo className="h-12" />
-          </div>
-
-          {!tokenValid ? (
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold mb-4">Enlace inválido</h2>
-              <p className="text-gray-600 mb-6">
-                {error || "El enlace para restablecer la contraseña no es válido o ha expirado."}
-              </p>
-              <Button asChild className="w-full bg-[#8BC34A] hover:bg-[#7CB342]">
-                <Link href="/login">Volver al inicio de sesión</Link>
-              </Button>
+    <>
+      {isSubmitting && (
+        <Loader fullScreen size="lg" text="Actualizando contraseña..." />
+      )}
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="w-full max-w-md border-0 shadow-lg">
+          <CardContent className="pt-8">
+            <div className="flex justify-center mb-8">
+              <Logo className="h-12" />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-4">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-semibold">Crear nueva contraseña</h2>
-                  <p className="text-gray-600 mt-2">
-                    Por favor, ingresa y confirma tu nueva contraseña para la cuenta {email}
-                  </p>
-                </div>
 
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div>
-                  <Label htmlFor="password">Nueva contraseña</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="text-sm text-gray-600">
-                  <p>La contraseña debe contener:</p>
-                  <ul className="list-disc pl-5 mt-1">
-                    <li>Al menos 8 caracteres</li>
-                    <li>Una letra mayúscula</li>
-                    <li>Una letra minúscula</li>
-                    <li>Un número</li>
-                    <li>Un carácter especial (!@#$%^&*)</li>
-                  </ul>
-                </div>
-
-                <Button type="submit" className="w-full bg-[#8BC34A] hover:bg-[#7CB342]">
-                  Cambiar contraseña
+            {!tokenValid ? (
+              <div className="text-center">
+                <h2 className="text-2xl font-semibold mb-4">Enlace inválido</h2>
+                <p className="text-gray-600 mb-6">
+                  {error || "El enlace para restablecer la contraseña no es válido o ha expirado."}
+                </p>
+                <Button asChild className="w-full bg-[#8BC34A] hover:bg-[#7CB342]">
+                  <Link href="/login">Volver al inicio de sesión</Link>
                 </Button>
               </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            ) : (
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <h2 className="text-2xl font-semibold">Crear nueva contraseña</h2>
+                    <p className="text-gray-600 mt-2">
+                      Por favor, ingresa y confirma tu nueva contraseña para la cuenta {email}
+                    </p>
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div>
+                    <Label htmlFor="password">Nueva contraseña</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    <p>La contraseña debe contener:</p>
+                    <ul className="list-disc pl-5 mt-1">
+                      <li>Al menos 8 caracteres</li>
+                      <li>Una letra mayúscula</li>
+                      <li>Una letra minúscula</li>
+                      <li>Un número</li>
+                      <li>Un carácter especial (!@#$%^&*)</li>
+                    </ul>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-[#8BC34A] hover:bg-[#7CB342]"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Actualizando..." : "Cambiar contraseña"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </>
   )
 } 

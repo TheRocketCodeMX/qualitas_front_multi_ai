@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 import { Loader } from "@/components/ui/loader"
+import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 
 export function LoginForm() {
@@ -20,13 +21,13 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
+  const [isClient, setIsClient] = useState(false)
 
   const { login } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    setIsMounted(true)
+    setIsClient(true)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,9 +44,34 @@ export function LoginForm() {
     }
   }
 
-  // No renderizar nada en el servidor
-  if (!isMounted) {
-    return null
+  // Mostrar skeleton mientras se hidrata
+  if (!isClient) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="w-full max-w-md border-0 shadow-lg">
+          <CardContent className="p-8">
+            <div className="text-center mb-8">
+              <div className="flex justify-center mb-6">
+                <Skeleton className="h-12 w-12 rounded" />
+              </div>
+              <Skeleton className="h-8 w-64 mx-auto mb-2" />
+              <Skeleton className="h-4 w-48 mx-auto" />
+            </div>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
