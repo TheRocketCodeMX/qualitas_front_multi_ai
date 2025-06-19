@@ -63,14 +63,15 @@ export default function CatalogoPage() {
   }, [])
 
   const refreshLoteEnProceso = useCallback(async (idLote: number | undefined | null) => {
-    if (typeof idLote !== 'number' || isNaN(idLote)) return; // Solo continuar si idLote es un número válido
+    if (typeof idLote !== 'number' || isNaN(idLote)) return;
     try {
       setIsRefreshing(true);
       const response = await cotizacionMasivaService.consultarEstadoLote(idLote);
-      const lote = response.lote; // Desestructura correctamente
+      const lote = response.lote;
       setSolicitudes(prev => prev.map(s => s.idLote === idLote ? { ...s, ...lote } : s));
       if (lote.estadoLote === "COMPLETADO") {
         setLoteEnProceso(null);
+        await fetchSolicitudes(); // Forzar actualización global
       } else {
         setLoteEnProceso(lote);
       }
@@ -79,7 +80,7 @@ export default function CatalogoPage() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [])
+  }, [fetchSolicitudes]);
 
   // Efecto para identificar el lote en proceso al cargar o cuando cambian las solicitudes
   useEffect(() => {
@@ -92,9 +93,9 @@ export default function CatalogoPage() {
     if (!loteEnProceso || typeof loteEnProceso.idLote !== 'number' || isNaN(loteEnProceso.idLote)) return;
     const interval = setInterval(() => {
       refreshLoteEnProceso(loteEnProceso.idLote);
-    }, 20000);
+    }, 10000);
     return () => clearInterval(interval);
-  }, [loteEnProceso, refreshLoteEnProceso]);
+  }, [loteEnProceso?.idLote, refreshLoteEnProceso]);
 
   useEffect(() => {
     fetchSolicitudes()
@@ -385,14 +386,8 @@ export default function CatalogoPage() {
     setIsModalOpen(true)
   }
 
-  const handleValidationComplete = async (vehiculosValidos: any[]) => {
-    try {
-      const result = await cotizacionMasivaService.procesarCotizacion(vehiculosValidos)
-      setUploadSuccess(`Lote ${result.nombreLote} creado correctamente`)
-      fetchSolicitudes() // Actualizar la lista de solicitudes
-    } catch (error) {
-      setUploadError("Error al procesar la cotización")
-    }
+  const handleValidationComplete = async (result: any) => {
+    fetchSolicitudes();
   }
 
   const handleRefreshStatus = (nombreLote: string) => {
@@ -417,7 +412,7 @@ export default function CatalogoPage() {
         {/* Action Buttons */}
         <CatalogoActions
           onDownloadLayout={handleDownloadLayout}
-          onFileUpload={handleFileUpload}
+          onOpenUploadModal={() => setIsModalOpen(true)}
           isUploading={isUploading}
         />
 

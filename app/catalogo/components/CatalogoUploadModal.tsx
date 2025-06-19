@@ -9,7 +9,7 @@ import { cotizacionMasivaService } from "@/services/cotizacionMasivaService"
 interface CatalogoUploadModalProps {
   isOpen: boolean
   onClose: () => void
-  onValidationComplete: (vehiculosValidos: VehiculoValido[]) => void
+  onValidationComplete: (result: { nombreLote: string; estadoInicial: "EN_PROCESO" | "EN_COLA" }) => void
 }
 
 export default function CatalogoUploadModal({ isOpen, onClose, onValidationComplete }: CatalogoUploadModalProps) {
@@ -70,7 +70,7 @@ export default function CatalogoUploadModal({ isOpen, onClose, onValidationCompl
         nombreLote: result.nombreLote,
         estadoInicial: result.estadoInicial
       })
-      onValidationComplete(validationResult.vehiculosValidos)
+      onValidationComplete(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al procesar la cotización')
     } finally {

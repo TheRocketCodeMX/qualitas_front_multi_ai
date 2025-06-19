@@ -16,7 +16,7 @@ interface DashboardLayoutProps {
 
 const navigation = [
   { name: "Cotizador manual", href: "/cotizador", icon: Search },
-  { name: "Catálogo de datos", href: "/catalogo", icon: Database },
+  { name: "Cotización masiva", href: "/catalogo", icon: Database },
 ]
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
