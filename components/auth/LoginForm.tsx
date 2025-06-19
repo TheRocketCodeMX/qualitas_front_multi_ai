@@ -124,9 +124,9 @@ export function LoginForm() {
               </div>
 
               <div className="text-right">
-                <Link 
-                  href="/forgot-password" 
-                  className="text-[#8BC34A] hover:text-[#7CB342] text-sm font-medium"
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-gray-600 hover:text-gray-900"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>

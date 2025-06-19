@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
+import { useAuthGuard } from "@/hooks/useAuthGuard"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, Search, Database, LogOut, ChevronLeft, User } from "lucide-react"
@@ -21,7 +22,8 @@ const navigation = [
 ]
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, logout, isLoading, isAuthenticated } = useAuth()
+  const { user, logout, isAuthenticated } = useAuth()
+  const { isLoading } = useAuthGuard()
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -116,6 +118,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   )
 
+  // Si está cargando, mostrar el loader
   if (isLoading) {
     return (
       <Loader 
@@ -123,11 +126,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         size="lg"
         text="Verificando sesión..."
       />
-    );
+    )
   }
 
+  // Si no está autenticado, no renderizar nada
   if (!isAuthenticated) {
-    return null;
+    return null
   }
 
   return (

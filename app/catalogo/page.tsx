@@ -116,55 +116,17 @@ export default function CatalogoPage() {
   // Función para descargar el layout de Excel
   const handleDownloadLayout = () => {
     try {
-      const columns = ["Número", "Año", "Marca", "Modelo", "Descripción", "CP", "Género", "Fecha nacimiento"]
-      const exampleData = [
-        "1",
-        "2024",
-        "ALFA ROMEO",
-        "GIULIA",
-        "ESTREMA 4P L4 2.0T AUT., 05 OCUP.",
-        "55107",
-        "MASCULINO",
-        "25-04-1988",
-      ]
-
-      // Crear datos con encabezados y ejemplo
-      const layoutData = [columns, exampleData]
-
-      const wb = XLSX.utils.book_new()
-      const ws = XLSX.utils.aoa_to_sheet(layoutData)
-
-      // Ajustar ancho de columnas para mejor visualización
-      const colWidths = [
-        { wch: 10 }, // Número
-        { wch: 8 }, // Año
-        { wch: 15 }, // Marca
-        { wch: 15 }, // Modelo
-        { wch: 35 }, // Descripción
-        { wch: 8 }, // CP
-        { wch: 12 }, // Género
-        { wch: 15 }, // Fecha nacimiento
-      ]
-      ws["!cols"] = colWidths
-
-      XLSX.utils.book_append_sheet(wb, ws, "Layout")
-
-      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" })
-      const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
-      const url = URL.createObjectURL(blob)
-
+      // Crear un enlace para descargar el archivo estático
       const link = document.createElement("a")
-      link.href = url
-      link.download = "layout_consulta_masiva.xlsx"
+      link.href = "/LayoutCotizacionMasiva.xlsx"
+      link.download = "LayoutCotizacionMasiva.xlsx"
       document.body.appendChild(link)
       link.click()
-
       document.body.removeChild(link)
-      URL.revokeObjectURL(url)
 
       toast({
         title: "Layout descargado",
-        description: "El archivo layout_consulta_masiva.xlsx se ha descargado correctamente con ejemplo de llenado.",
+        description: "El archivo LayoutCotizacionMasiva.xlsx se ha descargado correctamente.",
         duration: 3000,
       })
     } catch (error) {

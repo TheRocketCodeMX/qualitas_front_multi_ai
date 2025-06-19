@@ -1,34 +1,28 @@
 "use client"
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 const publicRoutes = ['/login'];
 
 export function useAuthGuard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-    if (!hasRedirected) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-        if (!isAuthenticated && !publicRoutes.includes(pathname)) {
-          router.replace('/login');
-          setHasRedirected(true);
-        } else if (isAuthenticated && pathname === '/login') {
-          router.replace('/cotizador');
-          setHasRedirected(true);
-        }
-      }, 100);
-
-      return () => clearTimeout(timer);
+    if (isInitialized) {
+      if (!isAuthenticated && !publicRoutes.includes(pathname)) {
+        router.replace('/login');
+      } else if (isAuthenticated && pathname === '/login') {
+        router.replace('/cotizador');
+      }
     }
-  }, [isAuthenticated, pathname, router, hasRedirected]);
+  }, [isAuthenticated, isInitialized, pathname, router]);
 
-  return { isAuthenticated, isLoading };
+  return { 
+    isAuthenticated,
+    isLoading: !isInitialized
+  };
 }

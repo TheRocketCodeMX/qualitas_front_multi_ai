@@ -18,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  isInitialized: boolean;
 }
 
 // Crear un valor por defecto para el contexto
@@ -30,28 +31,45 @@ const defaultContextValue: AuthContextType = {
     throw new Error('AuthProvider no inicializado');
   },
   isAuthenticated: false,
+  isInitialized: false,
 };
 
 const AuthContext = createContext<AuthContextType>(defaultContextValue);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const token = authService.getToken();
-    if (token) {
-      setIsAuthenticated(true);
-      // Aquí podrías hacer una llamada al backend para obtener los datos del usuario
-      // usando el token almacenado
-    }
+    const initializeAuth = async () => {
+      try {
+        const token = authService.getToken();
+        if (token) {
+          // Aquí podrías validar el token con el backend si es necesario
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            setUser(JSON.parse(storedUser));
+            setIsAuthenticated(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error al inicializar la autenticación:', error);
+        authService.removeToken();
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
       const response = await authService.login({ vEmail: email, vPassword: password });
       authService.setToken(response.token);
+      localStorage.setItem('user', JSON.stringify(response.usuario));
       setUser(response.usuario);
       setIsAuthenticated(true);
       router.replace('/cotizador');
@@ -63,13 +81,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     authService.removeToken();
+    localStorage.removeItem('user');
     setUser(null);
     setIsAuthenticated(false);
     router.replace('/login');
   };
 
+  // No renderizar nada hasta que la autenticación esté inicializada
+  if (!isInitialized) {
+    return null;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      logout, 
+      isAuthenticated,
+      isInitialized 
+    }}>
       {children}
     </AuthContext.Provider>
   );

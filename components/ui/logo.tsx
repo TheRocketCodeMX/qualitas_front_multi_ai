@@ -1,11 +1,13 @@
 import Image from "next/image"
+import { cn } from "@/lib/utils"
 
 interface LogoProps {
   size?: "sm" | "md" | "lg"
   showText?: boolean
+  className?: string
 }
 
-export function Logo({ size = "md", showText = true }: LogoProps) {
+export function Logo({ size = "md", showText = true, className }: LogoProps) {
   const sizeClasses = {
     sm: "w-10 h-10",
     md: "w-14 h-14",
@@ -25,7 +27,7 @@ export function Logo({ size = "md", showText = true }: LogoProps) {
         alt="Wheel Logo"
         width={size === "sm" ? 40 : size === "md" ? 56 : 80}
         height={size === "sm" ? 40 : size === "md" ? 56 : 80}
-        className={`${sizeClasses[size]} object-contain`}
+        className={`${sizeClasses[size]} object-contain ${cn(className)}`}
         style={{ mixBlendMode: "multiply" }}
       />
       {showText && <span className={`font-bold text-gray-900 ${textSizeClasses[size]}`}>Wheel</span>}
